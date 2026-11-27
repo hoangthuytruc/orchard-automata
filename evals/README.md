@@ -2,8 +2,8 @@
 
 One case per skill, plus dry runs of the `feature-development`, `bug-fix` and `review-only` workflows, all on the
 sample project `sample/Ledger`. Each case runs the same prompt with the skill set and without it, and grades both
-arms. The harness is `claude plugin eval`, started by `adapters/claude-code/eval.sh`. These cases are the proof in
-`docs/skill-set-plan.md` sections 11 and 13: a change to core is accepted only when its case passes on the sample.
+arms. The harness is `claude plugin eval`, started by `adapters/claude-code/eval.sh`. These cases are the proof behind
+one rule: a change to core is accepted only when its case passes on the sample.
 
 ## What passes
 

@@ -118,7 +118,7 @@ clean; `verdict.py` run on the `handoff-ledger` fixture gives Not ready (the Ris
 `TransactionStoreTests.swift:18` is open; Risk blocks whatever its severity). The eval suite was not run (cost).
 
 Left for other owners (outside this change's files): `references/run-flow.md` section 9 should name `verdict.py`
-for the report's verdict; `docs/skill-set-plan.md` sections 6, 7 and 11 still describe the criteria table, the
+for the report's verdict; the design plan (a local file, not in this repository) sections 6, 7 and 11 still describe the criteria table, the
 Strict level as the verdict's guard and the with/without bar; the "Documenter" row of `docs/workflow-model.md` still
 reads "Only at Strict, for the report" (true, but no longer tied to the verdict). The `led-refund` review fixture
 labels finding 2 "Risk · Low" with state "open, for the developer", which part D counts as blocking.
@@ -150,7 +150,7 @@ selftest's README hash is no longer hard-coded, since the sample README changed 
 Not done here: `profile_check.py check sample/Ledger/.orchard/profile.md` in this repository exits 3 until the
 sample's files are tracked by git (the repository has one commit and `sample/` is untracked); inside the selftest's
 git copy it passes. `evals/adopt-ledger/graders/profile-quality.md` still lists `tag_policy_untested` among the
-required keys, and `docs/skill-set-plan.md` sections 4, 5, 6 and 7 still carry the old wording (both outside this
+required keys, and the design plan (a local file, not in this repository) sections 4, 5, 6 and 7 still carry the old wording (both outside this
 change's files). `pr_check` is required, but no skill reads it; it is listed only under `plan` and `run`.
 
 ## Cleanup after audit changes
@@ -169,7 +169,7 @@ Small consistency fixes left over from the two sections above.
 - **Verdict source.** `references/run-flow.md` section 9 names `scripts/verdict.py` as the verdict's source; the
   Documenter row of `docs/workflow-model.md` says the report quotes that verdict at every level.
 - **`adopt-ledger` grader.** `tag_policy_untested` is no longer listed among the required keys (it is optional).
-- **Straggler grep** over the repository (without `docs/skill-set-plan.md`): `ticket_is_basis` appears only in this
+- **Straggler grep** over the repository (without the design plan (a local file, not in this repository)): `ticket_is_basis` appears only in this
   log; "acceptance criteria" only in term definitions, the source ranking, the sample ticket and statements that
   there is no criteria table; no "Ready to accept" rule requires a picture; "by a person" only in the Validation
   term and this log.

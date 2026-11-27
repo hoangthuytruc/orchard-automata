@@ -17,6 +17,7 @@ if [ -e "$TARGET" ] && [ ! -f "$TARGET/.orchard-install" ]; then
 fi
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/orchard-install.XXXXXX")"
 cp -RL "$HERE/plugin" "$STAGE/orchard"
+rm -f "$STAGE/orchard/docs/skill-set-plan.md"  # a local design note, never installed
 find "$STAGE/orchard" -name '__pycache__' -type d -prune -exec rm -rf {} +
 {
   echo "source: $ORCHARD"

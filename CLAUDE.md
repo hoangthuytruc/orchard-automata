@@ -4,7 +4,7 @@ Guidance for agents working on this repository.
 
 ## What this repository is
 
-Orchard Automata is a portable, tool-agnostic skill set for iOS development with agents. It holds a platform-neutral workflow model, core skills, references, check scripts, role briefs, workflows, templates, per-tool adapters, an eval suite, and one sample project. The approved design is [docs/skill-set-plan.md](docs/skill-set-plan.md).
+Orchard Automata is a portable, tool-agnostic skill set for iOS development with agents. It holds a platform-neutral workflow model, core skills, references, check scripts, role briefs, workflows, templates, per-tool adapters, an eval suite, and one sample project. The design plan it was built from is kept outside this repository (`docs/skill-set-plan.md` is a local file git ignores); `docs/` is the authority.
 
 This repository is the product. It is never the target of its own workflows: a plan, a run or a review acts on a target project, and inside this repository that target is `sample/Ledger/`. Editing this repository (docs, skills, templates, scripts) is ordinary authoring.
 

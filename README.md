@@ -137,7 +137,7 @@ evals/         One case per skill, run on the sample, and the experiment records
 sample/Ledger  A small Swift package and app with seeded defects, used to prove every skill
 ```
 
-The design and its reasoning are in [docs/skill-set-plan.md](docs/skill-set-plan.md). Words such as scenario, basis, evidence and tier are defined in [docs/terms.md](docs/terms.md).
+Words such as scenario, basis, evidence and tier are defined in [docs/terms.md](docs/terms.md).
 
 ## Working on the skill set itself
 
