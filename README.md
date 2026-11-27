@@ -18,24 +18,16 @@ Orchard makes them <strong>prove</strong> their work, so you check evidence, not
 
 </div>
 
-```mermaid
-flowchart LR
-    P([Plan]):::agent --> A{{You approve}}:::you --> run
-    subgraph run [" Agents work. No questions asked. "]
-        direction TB
-        B([Build, tests first]):::agent --> C([Check, by scripts]):::agent --> R([Review, by a separate agent]):::agent
-        R -. fix, up to 3 rounds .-> B
-    end
-    run --> E([Report with evidence]):::agent --> X{{You accept}}:::you
+<p align="center">
+<a href="https://hoangthuytruc.github.io/orchard-automata/skill-map/">
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="site/skill-map/preview/overview-dark.png">
+<img src="site/skill-map/preview/overview-light.png" alt="The Orchard skill map: ticket, plan, your approval, a run that builds, checks and reviews, a report, your acceptance. Open the interactive version." width="100%">
+</picture>
+</a>
+</p>
 
-    classDef you fill:#fde68a,stroke:#d97706,stroke-width:2px,color:#422006
-    classDef agent fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
-    style run fill:transparent,stroke:#94a3b8,stroke-dasharray:5 5,color:#64748b
-```
-
-<p align="center"><sub>Yellow is you. Blue is the agents. You decide twice; nothing in between waits for you.</sub></p>
-
-<p align="center"><a href="https://hoangthuytruc.github.io/orchard-automata/skill-map/"><strong>Explore the interactive skill map →</strong></a><br><sub>Every skill, script and role, and how they connect. Click any node.</sub></p>
+<p align="center"><sub>The skill map. <a href="https://hoangthuytruc.github.io/orchard-automata/skill-map/"><strong>Click it for the live version</strong></a>: zoom, search, and open any skill, script or role.<br>Yellow is you. You decide twice; nothing in between waits for you.</sub></p>
 
 ## 📦 Install
 

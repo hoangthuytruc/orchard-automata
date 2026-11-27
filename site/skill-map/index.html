@@ -384,7 +384,8 @@ footer { position: fixed; inset: auto 0 0 0; height: 28px; display: flex; align-
   // theme
   const root = document.documentElement;
   let stored = null; try { stored = localStorage.getItem('orchard-map-theme'); } catch (e) { /* storage may be blocked */ }
-  root.dataset.theme = stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const asked = new URLSearchParams(location.hash.slice(1)).get('theme');  // #view=overview&theme=dark, for a shared link or a picture
+  root.dataset.theme = ['light', 'dark'].includes(asked) ? asked : stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   function theme() { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('orchard-map-theme', root.dataset.theme); } catch (e) { /* ignore */ } }
 
   const help = (open) => $('help').classList.toggle('open', open);
