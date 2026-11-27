@@ -16,7 +16,9 @@
 
 | State | Role | Tier | Skill |
 | --- | --- | --- | --- |
-| <State> | <Coordinator / Planner / Implementer / Verifier / Reviewer / Documenter> | <strong / light / set by plan> | <skill> |
+| <State> | <Coordinator / Planner / Plan verifier / Implementer / Verifier / Reviewer / Documenter> | <strong / light / set by plan> | <skill> |
+
+- Plan verification: <on | off>. On, the default, starts a separate plan verifier before approval (one more agent per plan).
 
 ## States
 

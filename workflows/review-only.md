@@ -20,6 +20,8 @@ A change that already exists and needs an independent review: a pull request, a 
 | Review | Reviewer, separate agent, read-only | Strong | `review` (reviewer by `roles/reviewer.md`) |
 | Ready | Coordinator | Light | `review` |
 
+- Plan verification: not applicable; this workflow has no plan.
+
 ## States
 
 | State | Entry | Action | Exit | Evidence |

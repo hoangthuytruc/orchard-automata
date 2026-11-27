@@ -25,6 +25,8 @@ A defect: what was seen, and what was expected.
 | After acceptance | Documenter, only when a scenario changed | Light | `update-docs` |
 | Whole run | Coordinator | Light | `run` |
 
+- Plan verification: on. A separate plan verifier checks the draft plan before approval (one more agent per plan). Set to `off` to skip it.
+
 ## States
 
 | State | Entry | Action | Exit | Evidence |

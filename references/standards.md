@@ -81,7 +81,8 @@ doubles, determinism, procedure, flaky tests). Two rules from it hold for every 
 standards:
 
 - Every behaviour change ships its tests in the same change, written first and seen to fail for the right reason.
-- Never lower a coverage threshold, loosen an assertion, skip, disable or delete a test to get green.
+- Never lower a coverage threshold, loosen an assertion, skip, disable or delete a test to get green. An expectation
+  changes only when its source changed, and the change says which (test strategy, section 17).
 
 ## 6. Security and privacy
 

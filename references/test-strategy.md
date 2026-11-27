@@ -9,7 +9,8 @@ time budgets and which kinds are enabled are project values in the profile (`tes
 Contents: 1 The seven checks · 2 Each check, defined · 3 Where iOS code is tested · 4 Choosing a kind ·
 5 Stubbed or real backend · 6 Design match is not a visual test · 7 The four axes · 8 Rule for plans ·
 9 Rules that save time · 10 Evidence about the final change · 11 Determinism · 12 Test doubles ·
-13 Writing a test · 14 Flaky tests · 15 Suite audit
+13 Writing a test · 14 Flaky tests · 15 Suite audit · 16 What a test may assert ·
+17 A finished test set
 
 ## 1. The seven checks
 
@@ -215,7 +216,8 @@ The rule is in `$ORCHARD/docs/principles.md`, "Evidence is about the final chang
    `try XCTUnwrap`) for preconditions so the test stops at the first broken assumption instead of cascading. Assert
    behaviour, not implementation details.
 5. **Cover the branches** the change introduces: happy, empty, failure, boundary (zero, max, month or day
-   boundary, cancellation, stale result arriving after a newer one).
+   boundary, cancellation, stale result arriving after a newer one). This list is where to look, not a
+   quota: a case is written only when it catches a failure the other tests miss (section 17).
 6. **Run** the project's command scoped to the suite; confirm a new test fails before the implementation exists,
    red for the right reason: the assertion, not a compile error or a nil crash.
 
@@ -253,3 +255,75 @@ Signals, cheapest first:
 - Skipped or disabled tests and the reasons; `withKnownIssue` without a reference.
 - Coverage thresholds and diff coverage, if configured, and whether they are gates or warnings. Coverage measures
   execution, not verification.
+
+## 16. What a test may assert
+
+A failing test says the code and an expectation disagree. It helps only when something other than the code can
+say which side is wrong. Some rules here are adapted from an MIT-licensed testing skill; see
+`$ORCHARD/THIRD_PARTY_NOTICES.md`.
+
+| The expected value may come from | It may not come from |
+| --- | --- |
+| The approved scenario and its basis (spec, design, team decision) | A constant copied from the code under test |
+| A contract someone else consumes: an endpoint, a schema, a stored or wire format, a recorded backend reply | The same calculation written again inside the test |
+| A law the code must obey: round trip, idempotency, ordering, an invariant | The code's own output, recorded and never reviewed |
+| A snapshot or golden file a person approved | A tuned value read from configuration |
+
+- **A test from the second column is a change detector.** When it fails nobody can tell which side is wrong, so
+  the only fix is to make the two agree again. Report it as that, not as proof. An approved snapshot or a fixture
+  can go stale too: when one fails, go back to its source before changing either side.
+- **Configuration is not behaviour.** A value is configuration when the source names the parameter and not its
+  value, and it changes for tuning: a timeout, a retry count, a page size, a feature-flag default, a remote-config
+  value, an animation duration. No test asserts it. The test passes in a value of its own and checks the rule
+  around it: for "refuse at the limit", a limit `L` chosen by the test, then one below `L`, `L`, and one above.
+  Those three stay green when the value is retuned, and each catches a different mistake (`>` for `>=`, `==`, a
+  rule that refuses everything).
+- **A value the source fixes exactly is a contract** and may be asserted: a legal retention period, a protocol
+  constant, a limit the spec states as a number. A value the server decides is neither: the app has no rule to
+  test, only its reaction to the reply.
+- **What does need a check around configuration:** which value wins when two sources set it (default, remote,
+  override) is behaviour, tested with values the test can tell apart; a shipped file that must have a key or a
+  range is checked where the app loads it, so the app fails fast too.
+- **No source for the expected value** (the rule exists only in the code) means there is nothing to test yet: it
+  is an undecided behaviour. Name it for the owner; a test would make it permanent.
+
+## 17. A finished test set
+
+Written tests join a suite other changes wrote and later changes will edit. A test set for a change is finished
+when three things hold; then stop writing tests.
+
+**Complete**
+- Every behaviour the change must have, with its failure modes, has at least one assertion that fails when the
+  behaviour breaks. The behaviours come from the scenario rows, not from the lines changed.
+- Every path through the changed code is exercised, or accounted for in words: where it runs, which invariant
+  prevents it, or what stops it being verified. A behaviour that could not be verified is reported as open, never
+  counted as covered. A coverage percentage is not a goal.
+
+**Minimal**
+- Every case catches a failure the rest of the suite would miss, and its author can say which one. Two inputs with
+  the same expected result both stay when they catch different mistakes; a case that catches nothing new is merged
+  or not written.
+- The existing test comes first: keep, extend or correct the test that already covers the behaviour, and add a
+  case only for a failure the suite misses. When a test covered the behaviour and still let a defect through, fix
+  that test; a second test beside it leaves the weak one in place.
+- No test asserts a tuned value, repeats the calculation, or depends on a private symbol, its own setup or the
+  wall clock.
+
+**Consistent with the suite**
+- An existing test that turns red is evidence first, and its source decides which side changes. The code is wrong:
+  fix the code (`$ORCHARD/docs/principles.md`, "Fix the code, never the check"). The approved scenario changed the
+  behaviour: the expectation changes, and the change names the scenario row. The old expectation had no source or
+  held an incidental detail: correct or remove it and say why. Two sources of equal standing disagree: stop and
+  ask. An expectation is never edited until it passes with nothing said.
+- An expectation for a behaviour the change removed is removed in the same change; it would keep passing and
+  nobody would notice. The assertions in that test for behaviour that stays are kept.
+- Tests of behaviour the change did not touch still check what they checked before. A clean-up of the whole suite
+  is a task of its own.
+- A test is never removed because another one runs the same lines. Equal coverage does not mean the same failures
+  are caught; removing one takes an argument about the failures each catches.
+
+**A finding on a test** shows one of these, or it is a question:
+- a wrong implementation the test still accepts (the test cannot fail);
+- a change the sources allow that the test rejects: a retuned value, a refactor that keeps the behaviour, a
+  renamed private symbol (the test holds something it should not);
+- a required case that is skipped, never collected, or not deterministic.

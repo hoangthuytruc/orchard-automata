@@ -69,7 +69,7 @@ A run needs a person twice: to approve the plan before it starts, and to accept 
 | When | Person decides | What makes it cheap |
 | --- | --- | --- |
 | Once per project | The profile is right | Discovery output, already filled in, each value with its source |
-| Before a run | The plan: scope, scenarios, split, base branch | One plan file; every open question asked together, once |
+| Before a run | The plan: scope, scenarios, split, base branch | One plan file; every open question asked together, once; the plan verifier's objections |
 | During a run | Nothing | The run does not wait |
 | After a run | Accept, or send back | One report: each scenario with its test and proof, what did not run, the remaining findings |
 | After acceptance | Knowledge base diff; commit, pull request, merge, release | The diff with its check result; a draft pull-request body |
@@ -82,6 +82,7 @@ A run **ends early** only when going on would mean guessing: sources conflict wi
 | --- | --- | --- |
 | Coordinator | Drives the workflow: starts each role, checks each transition's evidence. Does none of the work | No: the session the developer started |
 | Planner | Writes the plan with the developer | No: the session the developer talks to |
+| Plan verifier | Checks the draft plan's claims against the code and the sources, read-only, before approval | Yes, for every plan, a compact one included, unless the workflow file or the developer turns it off. Its cost is measured on one plan only ([experiment](../evals/experiments/2026-11-27-concord-ideas.md)) |
 | Implementer | Writes tests, then code, for one work package | Yes, at Standard and Strict |
 | Verifier | Runs the project's checks and records results | No: scripts produce the evidence |
 | Reviewer | Judges the change against the plan, read-only | Yes, always |
@@ -98,7 +99,7 @@ Each state names a tier, never a model: **strong** or **light**. The plan gives 
 | | Shared | Standard (default) | Strict |
 | --- | --- | --- | --- |
 | Separate agents | Reviewer | Implementers, reviewer | Implementers, reviewer, report writer |
-| Agents started, P packages, clean run | 1 | P + 1 | P + 2 |
+| Agents started in a run, P packages, clean run (the plan verifier, before the run, is one more) | 1 | P + 1 | P + 2 |
 | Fits | A change in one or two files with a clear cause | An ordinary feature or defect, one to four packages | Risk (sign-in, payments, stored data, concurrency, shared component) or a long run. The verdict does not depend on the level: a script computes it from the evidence and the review |
 | Tokens and time | Not measured | Not measured | Not measured |
 
@@ -108,7 +109,7 @@ The workflow file names the default; the plan may raise it, or lower it to Share
 
 ## Rules of a run
 
-1. **The plan is the contract.** Every agent works from the approved plan file, not from what another agent said.
+1. **The plan is the contract.** Every agent works from the approved plan file, not from what another agent said. Approval is bound to the text: the plan is sealed when approved, and a run does not start, or report, on a plan edited since.
 2. **The brief is the agent's whole world.** It carries everything the agent needs and nothing else.
 3. **One writer per file.** The plan gives each file to one package.
 4. **A shared tree or a working copy each.** A conflict between working copies ends the run: the split was wrong.
@@ -117,7 +118,7 @@ The workflow file names the default; the plan may raise it, or lower it to Share
 7. **Tiers by uncertainty and consequence**, as above.
 8. **One shared device, one run.** Two test runs on the same simulator or device stall each other.
 
-One round, in order: implementers work; their changes are brought into one tree; the verifier runs the checks; the reviewer judges; the coordinator starts a fix round or moves to `Ready`. At most three rounds. Each fix starts with a test that fails because of the finding, and is followed by a review of the fixes only. Checks that run once per run run after the last round; if one fails and a round is left, that opens a fix round; if none is left, the run goes to `Ready` with verdict `blocked`.
+One round, in order: implementers work; their changes are brought into one tree; the verifier runs the checks; the reviewer judges; the coordinator starts a fix round or moves to `Ready`. At most three rounds. Each fix starts with a test that fails because of the finding, and is followed by a review of the fixes only, which ties every changed hunk to a finding or reports it. A test is held by its hash from the moment it is seen failing: it is not edited afterwards unless it is seen failing again. Checks that run once per run run after the last round; if one fails and a round is left, that opens a fix round; if none is left, the run goes to `Ready` with verdict `blocked`.
 
 ```mermaid
 flowchart TD
@@ -137,4 +138,4 @@ flowchart TD
 
 ## Run log
 
-Every run appends one record to the run log on the developer's machine, written by `scripts/runlog.py`, never recalled by an agent. Fields: workflow, isolation level, tier per package and for diagnosis and planning; where the run ended early and why; findings with category and cited rule; checks that failed first try; flaky tests; tokens and time per role and round, or "not available", never estimated; steps up to strong and the failure before each; waits on the device or backend; time from request to handoff, with the wait for approval separate; what was sent back at acceptance, in the developer's words. `retro` reads it.
+Every run appends one record to the run log on the developer's machine, written by `scripts/runlog.py`, never recalled by an agent. Fields: workflow, isolation level, tier per package and for diagnosis and planning; where the run ended early and why; the cause of every failed loop (plan gap, executor, test defect, flaky, environment, blocked); findings with category and cited rule; checks that failed first try; flaky tests; tokens and time per role and round, or "not available", never estimated; steps up to strong and the failure before each; waits on the device or backend; time from request to handoff, with the wait for approval separate; what was sent back at acceptance, in the developer's words. `retro` reads it.

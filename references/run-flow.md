@@ -20,7 +20,10 @@ nothing changed; the run never waits mid-way for an answer.
    missing; end early and name it. Exit 3: a source file changed; discover only those keys again, and end early for
    the developer to confirm any value that now differs.
 2. **Plan status.** Only `Status: approved <date>` starts the work; anything else ends the run with one line saying
-   what is missing.
+   what is missing. Then `python3 -I $ORCHARD/scripts/plan_seal.py check <plan>`: exit 1 means the plan was edited
+   after approval (the changed sections are named), and the run ends early for the developer to approve the new text
+   or restore the old; exit 2 means the plan was approved without a seal, which the run says once and the report
+   lists as a gap.
 3. **Base branch.** The plan header names the base branch, confirmed at approval; the run does not ask again.
    `git merge-base --is-ancestor <base> HEAD` must succeed, or the run ends early.
 4. **Lock.** `python3 -I $ORCHARD/scripts/lock_check.py snapshot <plans_dir>/<name>.lock.json <locked_globs>`, with the
@@ -58,7 +61,8 @@ Edit no other file. If you need one, stop and say which, and why.
 ## Procedure
 Follow $ORCHARD/skills/implement/SKILL.md. In short: for each scenario row, write the test bound to it first, at the
 cheapest kind that can observe it ($ORCHARD/references/test-strategy.md); run it and see it fail for the right
-reason; write the least code that passes; remove what your change made unused; review your diff against
+reason, recorded with `--files <the test file>`; after that the test file is not edited (a wrong test is a reason
+to stop and say "test defect"); write the least code that passes; remove what your change made unused; review your diff against
 $ORCHARD/references/review-checklist.md part C. The bar is $ORCHARD/references/standards.md.
 
 ## Commands
@@ -99,7 +103,17 @@ checks itself (section 7) and never copies a result from a return into the repor
 **Red runs are recorded.** Each new test is run before its code exists through `python3 -I
 $ORCHARD/scripts/evidence.py record <evidence file> --check <its kind's command key> --selection red-<Type.method>
 -- <scoped test command>`, and must exit non-zero on its assertion. "Seen failing first with" quotes that record's
-failure line. A bug-fix regression test written by `debug` is covered by debug's own record. Before
+failure line. The red run names its test files with `--files <test file>...`, placed before the `--`, so the
+record keeps their content hash. A bug-fix regression test written by `debug` is covered by debug's own record.
+
+**A test is not edited after its red run.** `evidence.py held <evidence file>` lists every test file whose content
+differs from the latest red run that named it. The coordinator runs it before `Implement → Verify` and before the
+report; `verdict.py` reads the same thing, and a file it lists keeps the verdict at "Not ready". Two ways out, and
+no third: the test is seen failing again in its new form and recorded as a new red run (before its code exists, or
+with the claim broken on purpose and restored), or the implementer stops and returns "test defect" with the
+evidence, and the coordinator decides. A fix round that adds a test to a file records that test's red run with the
+same `--files`, which holds the file again. What the hash cannot see, an earlier test in that file edited in the
+same step, is read by the review of fixes (section 5). Before
 `Implement → Verify`, the coordinator checks that each test in the table has a `red-<test>` record with a non-zero
 exit in the evidence file (`evidence.py table` shows it as "before the code"). A test without one is reported as
 not seen failing first; the return's claim is not copied.
@@ -119,11 +133,14 @@ Commands run:
 | Command | Exit | Last lines |
 | --- | --- | --- |
 
+Tests changed after their red run: <test, why, and the new red record; or "none">
+
 Not run, and why: <checks this package could not run, or "none">
 
 Plan problems: <anything in the plan that proved wrong, unclear or incomplete, with evidence; or "none">
 
-Stopped because: <only when stopped: the file needed, the loops used up, or the plan problem; with evidence>
+Stopped because: <only when stopped: the file needed, the loops used up, the plan problem, or a test defect; with
+evidence>
 ```
 
 ## 4. Shared tree or working copies
@@ -155,7 +172,10 @@ returns general comments and inline findings in that file's output format (part 
 
 **Review of fixes**, after each fix round: the same role on the light tier, given only the findings that were fixed
 and the diff since the last review. It answers per finding: fixed, not fixed, or fixed and broke something (a new
-finding).
+finding). It also accounts for every hunk of that diff: the finding the hunk fixes, or "fixes no finding" with what
+it changes. A hunk that fixes no finding was not asked for; it is judged as new work by the line review of the
+checklist, and when more than a few lines are in that state the coordinator calls a second full review (section 7,
+step 5). A hunk in a test file that changes a test no finding names is always reported.
 
 The reviewer never fixes. The agent that fixes a finding is not the one that raised it.
 
@@ -191,10 +211,19 @@ The labels and what blocks are in `$ORCHARD/references/review-checklist.md`, par
    scope (`$ORCHARD/references/test-strategy.md`, section 6). If one fails and a round is left, it opens a fix round:
    the fix starts from the failing check, is reviewed, and the affected checks run again. If no round is left, the run
    goes to Ready with the verdict "Blocked" and the failure in the report.
+   Every loop of a package that ends failing, and every required check that still fails at the end of a round, is
+   logged with its cause: `runlog.py event <RUN_ID> loop_failed --cause <cause> --round <r> --note "<package or
+   check>"`. The coordinator sets the cause from the evidence, not from the return's own words: `plan_gap` (the
+   plan was wrong, unclear or incomplete: a "Plan problems" entry the code confirms), `executor` (the plan was right
+   and the work was not), `test_defect` (the test was wrong), `flaky` (it passes and fails on the same code),
+   `environment` (simulator, device, backend or tool), `blocked` (a file not owned, a lock, a missing answer). When
+   the evidence does not decide between two, it logs the one that is cheaper to rule out next and says so in the
+   note.
 7. **At most three rounds** in all. A package that fails two loops on its tier runs its third on strong, with both
    failures in its brief (`runlog.py event <RUN_ID> step_up`); after that it is not tried again. Review rounds that
    run out do not stop the run: the remaining findings go into the report.
-8. **Before the report:** `evidence.py stale <evidence file>`; a stale result is run again, or reused only where
+8. **Before the report:** `evidence.py held <evidence file>` and `plan_seal.py check <plan>` (sections 3 and 1);
+   then `evidence.py stale <evidence file>`; a stale result is run again, or reused only where
    `affected_map` shows the later edits did not touch it, or reported as not verified. For each scenario not
    delivered, its code and tests are removed and the plan's "Result" says why.
 
@@ -202,7 +231,7 @@ The labels and what blocks are in `$ORCHARD/references/review-checklist.md`, par
 conflict with no rule to settle them, a locked file would have to change, the plan is wrong, a required profile key
 is missing, or working copies conflict. Log it: `runlog.py event <RUN_ID> ended_early --note "<reason>"`.
 
-Other run log events, recorded when they happen, never estimated afterwards: `tier`, `first_try_fail`, `flaky`,
+Other run log events, recorded when they happen, never estimated afterwards: `tier`, `loop_failed`, `first_try_fail`, `flaky`,
 `wait` (on a device or the backend), `send_back`. Tokens and time per role come from the tool where it reports them;
 otherwise "not available".
 

@@ -4,7 +4,7 @@
 
 | Receives | Is not given | May write | Returns |
 | --- | --- | --- | --- |
-| The brief, as a file | The conversation; other packages' work; the reviewer's reasoning beyond the quoted finding | Only the files its package owns, and red-run records appended through `evidence.py` to the evidence file the brief names | The return, as its final message |
+| The brief, as a file | The conversation; other packages' work; the reviewer's reasoning beyond the quoted finding | Only the files its package owns, and red-run records appended through `evidence.py` to the evidence file the brief names. A test file is not edited after the red run that named it | The return, as its final message |
 
 The brief template and the return format have one home: [references/run-flow.md](../references/run-flow.md), section 2 (package brief) and section 3 (implementer return). The coordinator fills the brief in and saves it as `<plans_dir>/<name>/brief-<k>-round-<r>.md` ([task files](coordinator.md#task-files)) before starting the agent; the return is saved as `package-<k>-round-<r>.md`. A return is a claim: `verify` produces the evidence.
 

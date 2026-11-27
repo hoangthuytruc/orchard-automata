@@ -338,6 +338,60 @@ def test_evidence(root):
           ['3 of 3 checks stale'])
     check('evidence table: a red run says "before the code" and shows its failure', ['evidence.py', 'table', ev], root,
           0, [r'red-LimitTests\.testSixthRefused \| [0-9a-f]{12} \(before the code\) \| 1 \| error: XCTAssertEqual'])
+    test_file = 'Tests/LedgerTests/TransactionStoreTests.swift'
+    check('evidence record: a red run that names its test file', ['evidence.py', 'record', ev, '--check', 'test.unit',
+          '--selection', 'red-TransactionStoreTests.testRefund', '--files', test_file, '--',
+          "echo 'error: XCTAssertEqual failed'; exit 1"], root, 1)
+    check('evidence held: test file untouched since its red run -> exit 0', ['evidence.py', 'held', ev], root, 0,
+          [r'0 of 1 test files named by red runs changed since \(1 red runs name no file\)'])
+    edit(root / 'Sources' / 'Ledger' / 'Transaction.swift', '\n// production code may change after red\n')
+    check('evidence held: a source edit does not break it', ['evidence.py', 'held', ev], root, 0)
+    edit(root / test_file, '\n// assertion loosened after red\n')
+    check('evidence held: test file edited after its red run -> exit 1, named', ['evidence.py', 'held', ev], root, 1,
+          [r'changed after red: Tests/LedgerTests/TransactionStoreTests\.swift \[red-TransactionStoreTests\.testRefund\]',
+           '1 of 1 test files'])
+    check('evidence table: the red row says the test changed since', ['evidence.py', 'table', ev], root, 0,
+          [r'red-TransactionStoreTests\.testRefund \| [0-9a-f]{12} \(before the code; test changed since\)'])
+    check('evidence record: a new red run of the edited test restores it', ['evidence.py', 'record', ev, '--check',
+          'test.unit', '--selection', 'red-TransactionStoreTests.testRefund', '--files', test_file, '--',
+          "echo 'error: XCTAssertEqual failed'; exit 1"], root, 1)
+    check('evidence held: holds again after the new red run', ['evidence.py', 'held', ev], root, 0)
+    edit(root / test_file, '\n// a fix round adds a second test to the same file\n')
+    check('evidence record: a red run of the added test names the same file', ['evidence.py', 'record', ev, '--check',
+          'test.unit', '--selection', 'red-TransactionStoreTests.testAdded', '--files', test_file, '--',
+          "echo 'error: XCTAssertEqual failed'; exit 1"], root, 1)
+    check('evidence held: the latest red run per file counts -> holds', ['evidence.py', 'held', ev], root, 0,
+          ['0 of 1 test files'])
+    os.rename(root / test_file, root / (test_file + '.gone'))
+    check('evidence held: test file removed -> exit 1', ['evidence.py', 'held', ev], root, 1, ['removed after red'])
+    os.rename(root / (test_file + '.gone'), root / test_file)
+
+
+def test_plan_seal(work):
+    plan = work / 'seal-plan.md'
+    plan.write_text('# Plan: seal\nStatus: draft\nWorkflow: bug-fix · Isolation: Standard · Base branch: main\n\n'
+                    '## In short\nFix the refund.\n\n## 7. Work packages\n| 1 | store | Sources/a.swift |\n\n'
+                    '## Result (written by run)\n| Scenario | Delivered |\n\n## Change note (written by update-docs)\n',
+                    encoding='utf-8')
+    check('plan seal: check before any seal -> exit 2', ['plan_seal.py', 'check', str(plan)], work, 2, ['none for'])
+    check('plan seal: seal', ['plan_seal.py', 'seal', str(plan)], work, 0, [r'plan seal: [0-9a-f]{12} -> '])
+    check('plan seal: untouched -> holds', ['plan_seal.py', 'check', str(plan)], work, 0, ['holds'])
+    sealed = json.loads((work / 'seal-plan.md.seal.json').read_text(encoding='utf-8'))['hash']
+    check('plan seal: hash prints the sealed hash and writes nothing', ['plan_seal.py', 'hash', str(plan)], work, 0,
+          ['^%s$' % sealed])
+    text = plan.read_text(encoding='utf-8')
+    plan.write_text(text.replace('Status: draft', 'Status: executed').replace(
+        '| Scenario | Delivered |', '| Scenario | Delivered |\n| TS_1 | yes |') + 'Scenarios changed: none\n',
+        encoding='utf-8')
+    check('plan seal: status, Result and Change note written by later steps -> still holds',
+          ['plan_seal.py', 'check', str(plan)], work, 0, ['holds'])
+    plan.write_text(plan.read_text(encoding='utf-8').replace('Sources/a.swift', 'Sources/a.swift, Sources/b.swift'),
+                    encoding='utf-8')
+    check('plan seal: a work package edited after approval -> exit 1, section named',
+          ['plan_seal.py', 'check', str(plan)], work, 1, [r'broken, changed since approval: ## 7\. Work packages'])
+    check('plan seal: sealing again (a new approval) holds', ['plan_seal.py', 'seal', str(plan)], work, 0)
+    check('plan seal: holds after the new seal', ['plan_seal.py', 'check', str(plan)], work, 0, ['holds'])
+    check('plan seal: a plan with no seal file -> exit 2', ['plan_seal.py', 'check', str(work / 'no-plan.md')], work, 2)
 
 
 def test_runlog(work):
@@ -347,14 +401,20 @@ def test_runlog(work):
     run_id = out.split()[0]
     for args in (['tier', '--role', 'implementer', '--round', '1', '--tier', 'light', '--tokens', '1200', '--seconds', '300'],
                  ['finding', '--note', 'concurrency: R-3'], ['send_back', '--note', 'banner copy wrong'],
-                 ['wait', '--seconds', '120']):
+                 ['wait', '--seconds', '120'],
+                 ['loop_failed', '--cause', 'plan_gap', '--round', '1', '--note', 'package 1: interface not in the plan'],
+                 ['loop_failed', '--cause', 'executor', '--round', '2', '--note', 'package 1']):
         check('runlog event %s' % args[0], ['runlog.py', 'event', run_id] + args, work, 0, [], env)
     check('runlog finish: with the closing session\'s tokens', ['runlog.py', 'finish', run_id, '--outcome', 'delivered',
           '--findings', '1', '--tokens', '800'], work, 0, ['"outcome": "delivered"'], env)
     check('runlog rate', ['runlog.py', 'rate', run_id, '--accepted', '1', '--rejected', '0', '--rework-minutes', '4',
           '--verify-minutes', '6'], work, 0, ['rated'], env)
+    check('runlog event: loop_failed without --cause -> exit 64', ['runlog.py', 'event', run_id, 'loop_failed'], work,
+          64, ['--cause is required'], env)
+    check('runlog event: --cause on another event -> exit 64', ['runlog.py', 'event', run_id, 'flaky', '--cause',
+          'flaky'], work, 64, [], env)
     check('runlog report: one run -> no baseline yet', ['runlog.py', 'report'], work, 0,
-          ['feature-development / standard', 'sent back 100%', 'tokens 2000', r'minutes 7\.0 \(from recorded seconds\)',
+          ['failed loops by cause: plan_gap 1, executor 1', 'feature-development / standard', 'sent back 100%', 'tokens 2000', r'minutes 7\.0 \(from recorded seconds\)',
            'no baseline yet'], env)
     other = check('runlog start: second run', ['runlog.py', 'start', '--workflow', 'feature-development', '--skill',
                   'run', '--task', 'LED-8'], work, 0, [], env).split()[0]
@@ -531,6 +591,24 @@ def test_verdict(root):
     check('verdict: no --reviews -> Not ready, findings unknown', args[:3], root, 1, ['no review read'])
     check('verdict: --ended-early quotes the reason -> Not ready', args + ['--ended-early', 'spec and design differ'],
           root, 1, [r'^Not ready$', 'the run ended early: "spec and design differ"'])
+    records(*base)
+    (reviews / 'review-round-1.md').write_text(VERDICT_REVIEW_CLEAN, encoding='utf-8')
+    check('verdict: an unsealed plan is a gap, not a reason', args, root, 0, [r'^Ready to accept$', 'the plan has no seal'])
+    run(['plan_seal.py', 'seal', str(plan)], root)
+    check('verdict: a sealed, unchanged plan -> Ready, no seal gap', args, root, 0, [r'^Ready to accept$'],
+          absent=['no seal', 'changed after approval'])
+    held = root / 'Tests' / 'LedgerTests' / 'TransactionStoreTests.swift'
+    kept = held.read_text(encoding='utf-8')
+    records(*(base + [{'check': 'test.unit', 'selection': 'red-StoreTests.testOne', 'command': 'swift test', 'exit': 1,
+                       'files': {'Tests/LedgerTests/TransactionStoreTests.swift': '000000000000'}}]))
+    check('verdict: a test file changed after its red run -> Not ready', args, root, 1,
+          [r'^Not ready$', 'test file changed after it was seen failing: Tests/LedgerTests/TransactionStoreTests.swift'])
+    records(*base)
+    edit(plan, '\nAn extra package slipped in after approval.\n')
+    check('verdict: the plan edited after its seal -> Not ready', args, root, 1,
+          [r'^Not ready$', 'the plan changed after approval'])
+    plan.write_text(VERDICT_PLAN, encoding='utf-8')
+    held.write_text(kept, encoding='utf-8')
     check('verdict: missing plan file -> exit 64', ['verdict.py', str(ev), str(plan) + '.missing'], root, 64)
 
 
@@ -558,6 +636,7 @@ def main():
         test_lock_and_gate(root)
         test_evidence(root)
         test_runlog(work)
+        test_plan_seal(work)
         test_leaks(work)
         test_adapters(root, work)
         test_verdict(root)

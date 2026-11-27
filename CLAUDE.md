@@ -16,7 +16,7 @@ This repository is the product. It is never the target of its own workflows: a p
 | `skills/<name>/SKILL.md` | Core | Twelve skills |
 | `references/` | Core | Generic iOS rules the skills cite |
 | `scripts/` | Core | Check and record scripts (Python 3 standard library, Bash) |
-| `roles/` | Core | Role briefs (implementer, reviewer, report writer) |
+| `roles/` | Core | Role briefs (implementer, reviewer, report writer, plan verifier) |
 | `workflows/` | Core | `feature-development`, `bug-fix`, `review-only` |
 | `templates/` | Core | Profile, review rules, agents map, plan, test report, workflow |
 | `adapters/<tool>/` | Core | Installation and how a tool starts a role. No rules |

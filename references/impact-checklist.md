@@ -21,6 +21,17 @@ Walked by `plan` for every change that gets a full plan (a compact bug-fix plan 
    winner; otherwise both readings, their sources, the consequence of each and the owner go to the plan's open
    questions, asked once with the rest.
 
+## Callers
+
+Before the perspectives, for every function, type, protocol, endpoint use, stored format or shared component whose
+behaviour the change alters: find who uses it (`git grep`, the code index), and for each caller write what it relies
+on and whether the change keeps it, with `path:line`. A caller that would lose a behaviour it relies on is an impact
+on that caller's feature ("Other features"), and it is the developer's decision, however small the change: one line
+that changes who may do something, what is trusted, what is deleted or kept, or what is charged decides more than a
+rename across thirty files. Such a choice goes to the plan's open questions as the smallest decision the developer
+can make, with what changes for whom under each answer. How the work is split and ordered is not such a choice.
+A compact plan does not walk the perspectives, but it still lists the callers of what the fix changes.
+
 ## The twelve perspectives
 
 | Perspective | Questions to answer |

@@ -12,7 +12,7 @@ Three modes, chosen from the argument or the context: **write** (add tests to a 
 
 | Reads | Writes | Never | Needs from the developer | Evidence |
 | --- | --- | --- | --- | --- |
-| The code under test, its existing tests, [references/test-strategy.md](../../references/test-strategy.md) (read first, every time), [references/standards.md](../../references/standards.md) | Tests and the smallest seam the code needs; for audit, a report at `<reports_dir>/test-audit-<date>.md` | Changes behaviour; weakens a test; records snapshots, or runs UI, monkey or real-backend suites unasked; commits | Whether to keep the tests; for a new dependency (a property-testing library), the decision | Each test with the reason it failed first; for flaky, the failure rate before and after, with the command |
+| The code under test, its existing tests, [references/test-strategy.md](../../references/test-strategy.md) (read first, every time), [references/standards.md](../../references/standards.md) | Tests and the smallest seam the code needs; for audit, a report at `<reports_dir>/test-audit-<date>.md` | Changes behaviour; weakens a test; records snapshots, or runs UI, monkey or real-backend suites unasked; commits | Whether to keep the tests; for a new dependency (a property-testing library), the decision | Each test with the source of its expected value, the failure it catches and the reason it failed first; for flaky, the failure rate before and after, with the command |
 
 ## Why
 
@@ -24,7 +24,7 @@ Falsifier. What would make this test fail, and is that the right reason? Tier: l
 
 ## General steps
 
-1. State the claim precisely. 2. Choose the cheapest observation that could contradict it. 3. Choose the inputs: the typical case, the boundaries, the invalid. 4. Remove chance: fix time, order and randomness. 5. Confirm that the check fails when the claim is false.
+1. State the claim precisely. 2. Choose the cheapest observation that could contradict it. 3. Choose the inputs: the typical case, the boundaries, the invalid. 4. Remove chance: fix time, order and randomness. 5. Confirm that the check fails when the claim is false. 6. Stop when every case catches a failure no other case catches.
 
 ## Method
 
@@ -34,7 +34,7 @@ Falsifier. What would make this test fail, and is that the right reason? Tier: l
 
 **write**
 
-4. Name each contract (happy, empty, failure, boundary, cancellation, stale result) and pick its kind by the claim: a value or rule is a unit test; how the app reacts is a behaviour test, in-process unless the claim needs real screens; how a screen looks is a visual test. Prefer a property over a table of boundary values when the claim is a rule (round trip, idempotency, invariant).
+4. Name each contract (happy, empty, failure, boundary, cancellation, stale result) and pick its kind by the claim: a value or rule is a unit test; how the app reacts is a behaviour test, in-process unless the claim needs real screens; how a screen looks is a visual test. Prefer a property over a table of boundary values when the claim is a rule (round trip, idempotency, invariant). For each case, name where its expected value comes from and the failure only it catches (test strategy, sections 16 and 17): extend the existing test before adding one; a rule with no source outside the code is named for the owner, not tested.
 5. Add the seams the code lacks (clock, ids, randomness, transport) with the smallest production change, in the project's style.
 6. Write the tests. Run the scoped command. A test written for a bug or a missing branch must fail before the behaviour exists; break the claim on purpose when it already exists, and see the test fail.
 
@@ -46,7 +46,7 @@ Falsifier. What would make this test fail, and is that the right reason? Tier: l
 
 4. Collect the suite-audit signals from the test strategy for the scope. Rank: tests that can give a false green first (no assertion, swallowed failures, skipped), then nondeterminism (sleeps, time, shared state), then gaps (untested types on main journeys), then speed. Write the report; give the top five in chat. No fixes.
 
-**Close.** Tests added or changed by name, commands run with exit statuses, what was not run. `runlog.py finish RUN_ID --outcome green|red|delivered --findings <audit items or 0>`.
+**Close.** Tests added or changed by name, each with its source and the failure it catches; expectations changed or removed, each with its reason; rules left untested because nothing outranks the code; commands run with exit statuses, what was not run. `runlog.py finish RUN_ID --outcome green|red|delivered --findings <audit items or 0>`.
 
 ## Rule that always holds
 

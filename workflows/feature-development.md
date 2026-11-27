@@ -24,6 +24,8 @@ A request for new or changed behaviour, with its sources: a ticket, a spec, a de
 | After acceptance | Documenter | Light | `update-docs` |
 | Whole run | Coordinator | Light | `run` |
 
+- Plan verification: on. A separate plan verifier checks the draft plan before approval (one more agent per plan). Set to `off` to skip it.
+
 ## States
 
 | State | Entry | Action | Exit | Evidence |

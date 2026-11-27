@@ -18,13 +18,17 @@ Ready to accept, when all hold:
     (references/review-checklist.md part D), read from the findings table (Type, Severity, State columns) or from
     the `### <where> · <Type> · <Severity>` headings of part E. A finding is closed only when its state starts with
     "fixed"; a line saying a finding is "not fixed" keeps the verdict at Not ready
+  - no test file changed after the red run that named it (`evidence.py held`): a test edited after it was seen
+    failing has to be seen failing again
+  - the plan still has the text that was approved, when it was sealed (`plan_seal.py check`)
 Blocked: a required check fails on the current state and the review rounds are used up (the plan's "Rounds: at
   most <n>", default three; the rounds used are the highest round number in the review file names or their
   "## Round <n>" headings).
 Not ready: otherwise, or when the run ended early (--ended-early, quoted), or when no review was read.
 
 Gaps (never change the verdict): a delivered scenario with no screenshot or recording record (check `screenshot` or
-`recording`, selection naming the scenario) on the current state. The report names each with its reason.
+`recording`, selection naming the scenario) on the current state; a plan with no seal. The report names each with
+its reason.
 
 Exit codes:
   0   Ready to accept
@@ -271,6 +275,22 @@ def main():
         elif record.get('exit') != 0:
             reasons.append('check %s fails on the current state (exit %s)' % (name, record.get('exit')))
             failing.append(name)
+
+    root = evidence.find_root(args.root)
+    for selection, path, what in evidence.changed_since_red(root, records):
+        reasons.append('test file %s after it was seen failing: %s [%s]; not seen failing in its current form' % (
+            what, path, selection))
+    import plan_seal  # a sibling script, read the same way the plan skill writes it
+    if not plan_seal.seal_path(args.plan).exists():
+        gaps.append('the plan has no seal: its text cannot be compared with what was approved')
+    else:
+        import json
+        sealed = json.loads(plan_seal.seal_path(args.plan).read_text(encoding='utf-8'))
+        now = plan_seal.sections(args.plan)
+        if plan_seal.whole(now) != sealed.get('hash'):
+            names = [n or 'the header' for n in list(sealed.get('sections', {})) + [k for k in now if k not in sealed.get('sections', {})]
+                     if sealed.get('sections', {}).get(n) != now.get(n)]
+            reasons.append('the plan changed after approval: %s' % '; '.join(names))
 
     used, limit = None, rounds_limit(plan_text)
     if not args.reviews:

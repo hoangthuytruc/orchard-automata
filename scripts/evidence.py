@@ -4,17 +4,24 @@
   evidence.py state [--root R]
       print the change state: the first 12 hex of sha256 over the HEAD commit id, `git diff HEAD --binary` and the
       path and content of every untracked file that git does not ignore
-  evidence.py record <evidence.jsonl> --check <kind> --selection <text> [--root R] -- <command...>
+  evidence.py record <evidence.jsonl> --check <kind> --selection <text> [--files F...] [--root R] -- <command...>
       run the command in the root, show its output, and append one record: check, selection, command, exit,
       duration_s, summary (last 15 lines of output), failures (up to 10 lines that look like an error or a failed assertion), state, time. One argument after -- runs through the shell
       (for `swift build && swift test`); several run as given
+      --files stores the content hash of each named file in the record. A red run names its test files this way,
+      so a later edit to them can be seen (`held`)
+  evidence.py held <evidence.jsonl> [--root R]
+      list every test file changed, or removed, since the latest red run that named it. A test edited after it was
+      seen failing is no longer the test that was seen failing. The latest red run counts per file, so a fix round
+      that adds a test to the file and records its red run holds the file again; what a script cannot see is an
+      earlier test in that file edited in the same step, which the review of fixes reads
   evidence.py stale <evidence.jsonl> [--root R]
       list the checks whose latest record was made on another state than the current one. A red run (selection
       `red-<test>`: a new test run before its code existed, references/run-flow.md section 3) is left out: it is
       meant to have run on an earlier state
   evidence.py table <evidence.jsonl> [--root R]
       print the "Checks run" table of templates/test-report.md; a stale row says so in "Ran on", a red run says
-      "before the code". Summary: a failed
+      "before the code", and "test changed since" when `held` would list it. Summary: a failed
       check's first failure line; a passing check's last XCTest or Swift Testing summary with a non-zero test count,
       else its last line
 
@@ -26,6 +33,7 @@ Exit codes:
   record: the command's own exit code (127 when it cannot be started)
   state, table: 0
   stale: 0 when every check's latest record matches the current state, 1 when one does not (listed)
+  held: 0 when every file named by a red run is unchanged, 1 when one changed or is gone (listed)
   2   not inside a git repository and no --root given (with --root, the state hashes the files: nogit-)
   64  wrong usage, or the evidence file cannot be read
 """
@@ -153,6 +161,36 @@ def latest(records):
     return list(by_check.values())
 
 
+def file_digest(root, path):
+    target = Path(path) if os.path.isabs(path) else Path(root) / path
+    try:
+        return hashlib.sha256(target.read_bytes()).hexdigest()[:12]
+    except OSError:
+        return None
+
+
+def red_files(records):
+    """Per file a red run named, its hash in the latest red run that named it: {path: (hash, selection)}. The latest
+    one counts because a fix round adds a test to a file an earlier red run already named."""
+    held = collections.OrderedDict()
+    for record in records:
+        selection = str(record.get('selection', ''))
+        if selection.startswith(RED):
+            for path, was in (record.get('files') or {}).items():
+                held[path] = (was, selection)
+    return held
+
+
+def changed_since_red(root, records):
+    """[(selection, path, what)] for every file a red run named that no longer has the content it had then."""
+    changed = []
+    for path, (was, selection) in red_files(records).items():
+        now = file_digest(root, path)
+        if now != was:
+            changed.append((selection, path, 'removed' if now is None else 'changed'))
+    return changed
+
+
 def cmd_state(args):
     print(change_state(find_root(args.root)))
     return 0
@@ -198,6 +236,11 @@ def cmd_record(args):
         'state': state,
         'time': datetime.now(timezone.utc).isoformat(timespec='seconds'),
     }
+    if args.files:
+        missing = [path for path in args.files if file_digest(root, path) is None]
+        if missing:
+            print('note: --files cannot read %s' % ', '.join(missing), file=sys.stderr)
+        record['files'] = {path: file_digest(root, path) for path in args.files if path not in missing}
     after = change_state(root, [args.evidence])
     if after != state:
         record['state_after'] = after
@@ -219,6 +262,19 @@ def cmd_stale(args):
     return 1 if stale else 0
 
 
+def cmd_held(args):
+    root = find_root(args.root)
+    records = load(args.evidence)
+    changed = changed_since_red(root, records)
+    for selection, path, what in changed:
+        print('%s after red: %s [%s]' % (what, path, selection))
+    red = {r.get('selection') for r in records if str(r.get('selection', '')).startswith(RED)}
+    unnamed = red - {r.get('selection') for r in records if r.get('files')}
+    print('%d of %d test files named by red runs changed since (%d red runs name no file)' % (
+        len(changed), len(red_files(records)), len(unnamed)))
+    return 1 if changed else 0
+
+
 def cell(text):
     return ' '.join(str(text).split()).replace('|', '\\|')
 
@@ -235,14 +291,16 @@ def summary_line(record, lines):
 
 
 def cmd_table(args):
-    current = change_state(find_root(args.root), [args.evidence])
+    root = find_root(args.root)
+    current = change_state(root, [args.evidence])
+    edited = {selection for selection, _, _ in changed_since_red(root, load(args.evidence))}
     print('| Check | Command | Selection | Ran on | Exit | Summary | Time |')
     print('| --- | --- | --- | --- | --- | --- | --- |')
     for record in load(args.evidence):
         lines = [line for line in record.get('summary', '').splitlines() if line.strip()]
         ran_on = record.get('state', '')
         if str(record.get('selection', '')).startswith(RED):
-            ran_on += ' (before the code)'
+            ran_on += ' (before the code; test changed since)' if record.get('selection') in edited else ' (before the code)'
         elif ran_on != current:
             ran_on += ' (stale)'
         print('| %s | `%s` | %s | %s | %s | %s | %s s |' % (
@@ -258,13 +316,14 @@ def main():
     state = sub.add_parser('state')
     state.add_argument('--root')
     state.set_defaults(fn=cmd_state)
-    record = sub.add_parser('record', usage='%(prog)s <evidence.jsonl> --check KIND --selection TEXT [--root R] -- <command...>')
+    record = sub.add_parser('record', usage='%(prog)s <evidence.jsonl> --check KIND --selection TEXT [--files F...] [--root R] -- <command...>')
     record.add_argument('evidence')
     record.add_argument('--check', required=True, help='kind of check: a profile command key')
     record.add_argument('--selection', required=True, help='what ran: suites, files, "all"')
+    record.add_argument('--files', nargs='*', default=[], help='files whose content hash the record keeps (a red run: its test files)')
     record.add_argument('--root')
     record.set_defaults(fn=cmd_record)
-    for name, fn in (('stale', cmd_stale), ('table', cmd_table)):
+    for name, fn in (('stale', cmd_stale), ('table', cmd_table), ('held', cmd_held)):
         command = sub.add_parser(name)
         command.add_argument('evidence')
         command.add_argument('--root')

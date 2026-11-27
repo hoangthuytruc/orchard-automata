@@ -42,6 +42,7 @@ Roles and tiers come from the project's agents map (`.orchard/agents.md`, overri
 | --- | --- |
 | Coordinator, planner, verifier, documenter at Shared and Standard | The session the developer started. Nothing is started |
 | Implementer | Agent tool, general-purpose subagent. Prompt: "Follow the brief in `<brief file>`", the brief from `references/run-flow.md` section 2 saved as a file, and nothing else. `model`: the package's tier. For "a working copy each", add `isolation: "worktree"`; bring each worktree's change into the main tree as `references/run-flow.md` says |
+| Plan verifier (every plan, unless the workflow turns it off) | Agent tool, a general-purpose agent. Prompt: one line, `Check the plan <path> in the repository at <root>. Follow <skill set>/roles/plan-verifier.md.` `model`: strong |
 | Reviewer | Agent tool, `subagent_type: "orchard:orchard-reviewer"`. Prompt: one line, `Review <target> in the repository at <root>. Follow <skill set>/roles/reviewer.md.`, plus `Plan: <path>.` when there is one. `model`: strong for a full review, light for a review of fixes |
 | Report writer (Strict only) | Agent tool, general-purpose subagent. Prompt: the brief from `roles/report-writer.md` |
 

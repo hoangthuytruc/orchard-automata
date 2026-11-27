@@ -3,6 +3,7 @@
 
   runlog.py start --workflow W --skill S --task T [--isolation shared|standard|strict]       -> prints RUN_ID
   runlog.py event RUN_ID <type> [--role R] [--round N] [--tier strong|light] [--tokens N|na] [--seconds N] [--note T]
+                                [--cause plan_gap|executor|test_defect|flaky|environment|blocked]
   runlog.py finish RUN_ID --outcome delivered|green|red|blocked|ended_early [--findings N] [--tokens N|na] [--seconds N]
   runlog.py rate RUN_ID [--accepted N] [--rejected N] [--rework-minutes N] [--verify-minutes N]
   runlog.py report [--since 30d] [--group workflow,isolation] [--json]
@@ -14,6 +15,11 @@ Event types:
   step_up         a step up to the strong tier; --note names the failure before it
   ended_early     where the run ended early; --note names the conflict
   finding         one reviewer finding; --note gives its category and the rule it cites
+  loop_failed     a package loop, or a required check, that ended failing; --cause is required and says why:
+                  plan_gap (the plan was wrong, unclear or incomplete), executor (the plan was right and the work
+                  was not), test_defect (the test was wrong), flaky (it passes and fails on the same code),
+                  environment (simulator, device, backend or tool), blocked (a file not owned, a lock, a missing
+                  answer); --note names the package or check
   first_try_fail  a check that failed on its first try (--note: which)
   flaky           a flaky test (--note: which)
   wait            time waiting on the simulator, device or backend (--seconds)
@@ -60,7 +66,8 @@ from pathlib import Path
 FILE = Path(os.environ.get('ORCHARD_RUNLOG') or Path.home() / '.orchard' / 'runlog.jsonl')
 OUTCOMES = ('delivered', 'green', 'red', 'blocked', 'ended_early')
 ACCEPTED = ('delivered', 'green')
-EVENTS = ('tier', 'step_up', 'ended_early', 'finding', 'first_try_fail', 'flaky', 'wait', 'approval_wait',
+CAUSES = ('plan_gap', 'executor', 'test_defect', 'flaky', 'environment', 'blocked')
+EVENTS = ('tier', 'step_up', 'ended_early', 'finding', 'loop_failed', 'first_try_fail', 'flaky', 'wait', 'approval_wait',
           'send_back', 'question', 'seeded_missed')
 ISOLATION = ('shared', 'standard', 'strict')
 GROUP_FIELDS = ('workflow', 'isolation', 'skill')
@@ -153,8 +160,11 @@ def cmd_event(args):
     if not known(args.run_id):
         print('no run to log (the run log is disabled)')
         return 0
+    if (args.type == 'loop_failed') != (args.cause is not None):
+        print('--cause is required with loop_failed, and only taken with it', file=sys.stderr)
+        return 64
     line = {'run_id': args.run_id, 'kind': 'event', 'time': now_iso(), 'type': args.type}
-    for key in ('role', 'round', 'tier', 'tokens', 'seconds', 'note'):
+    for key in ('role', 'round', 'tier', 'tokens', 'seconds', 'note', 'cause'):
         value = getattr(args, key)
         if value is not None:
             line[key] = value
@@ -288,6 +298,8 @@ def figures(group_runs):
         'minutes_per_accepted_task': round(total_seconds / 60 / len(accepted), 1) if accepted else None,
         'minutes_source': minutes_source(timed, len(finished)),
         'seeded_missed': sum(count(r, 'seeded_missed') for r in group_runs),
+        'failed_loops_by_cause': {cause: n for cause in CAUSES for n in [sum(
+            1 for r in group_runs for e in r['events'] if e.get('type') == 'loop_failed' and e.get('cause') == cause)] if n},
         'first_try_fails': sum(count(r, 'first_try_fail') for r in group_runs),
         'flaky_tests': sum(count(r, 'flaky') for r in group_runs),
         'step_ups': sum(count(r, 'step_up') for r in group_runs),
@@ -342,6 +354,8 @@ def cmd_report(args):
         print('- cost per accepted task: tokens %s; minutes %s (%s)'
               % (tokens, show(f['minutes_per_accepted_task']), f['minutes_source']))
         print('- quality: seeded defects missed %d' % f['seeded_missed'])
+        causes = f['failed_loops_by_cause']
+        print('- failed loops by cause: %s' % (', '.join('%s %d' % item for item in causes.items()) or 'none recorded'))
         print('- signals: first-try fails %d; flaky tests %d; steps up to strong %d; questions %d; '
               'device or backend wait %s min; approval wait %s min; findings accepted %s; rework minutes %s'
               % (f['first_try_fails'], f['flaky_tests'], f['step_ups'], f['questions'],
@@ -388,6 +402,7 @@ def main():
     event.add_argument('--tokens', type=tokens_value, help='a whole number reported by the agent tool, or na')
     event.add_argument('--seconds', type=float)
     event.add_argument('--note')
+    event.add_argument('--cause', choices=CAUSES, help='why a loop failed (loop_failed only)')
     event.set_defaults(fn=cmd_event)
 
     finish = sub.add_parser('finish')

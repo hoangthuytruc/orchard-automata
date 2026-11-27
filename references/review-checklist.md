@@ -87,6 +87,12 @@ plain words, never forced onto one line.
 - Is the design change of the plan what was built? Does every scenario row have its test, and does the test prove
   it? Did anything outside the plan's packages change? Was any test weakened?
 
+**Callers** (with or without a plan)
+- When the diff changes what a function, a type, a protocol, a stored or wire format or a shared component does,
+  open the callers the diff does not touch (`git grep`, the whole repository). Does each still get the behaviour it
+  relies on? A caller that loses one is a finding on the changed line, with the caller's `path:line` as evidence.
+- With a plan: is every such caller in the plan's impact section? One the plan did not name is a plan gap, said so.
+
 **Against the sources** (with or without a plan)
 
 A test bound to a scenario proves the scenario, not that the scenario is right. The reviewer reads the product
@@ -301,6 +307,11 @@ Add the project smells listed in its review rules.
   initial state, trigger, transition, side effect, outcome. A test named after the feature is not a test of the
   branch.
 - Tests assert behaviour, not implementation details: a refactor that keeps the behaviour keeps the test green.
+- Does each expected value come from a source that outranks the code, and does no test assert a tuned value
+  (`$ORCHARD/references/test-strategy.md`, section 16)?
+- Is the set finished and no more: each case catches a failure the others miss; the existing test was extended
+  before a new one was added; every changed or removed expectation names its reason; no expectation is left for a
+  behaviour the change removed (section 17)? A finding on a test carries the evidence that section lists.
 - Tests are deterministic: injected time, ids and randomness; no sleeps, retries, raised timeouts or `.serialized`
   without a reason; no shared static state. Async tests await a value or a state, never a delay.
 - Negative and boundary cases exist for the new branches; an error-path test asserts the specific error; a bug fix
@@ -392,7 +403,10 @@ review never approves.
 
 **Review of fixes.** After a fix round the reviewer gets only the findings that were fixed and the diff since the
 last review. It answers per finding: fixed, not fixed, or fixed and broke something (a new finding in the format
-above).
+above). Then it accounts for every hunk of that diff in a short table: hunk (`path:line range`), the finding it
+fixes, or "fixes no finding" with what it changes. A hunk is tied to a finding only when all of it is needed for
+that fix. A hunk that fixes no finding is reviewed as new work with the line review, and a hunk in a test file that
+changes a test no finding names is always reported: a fix round is where a test is most easily loosened.
 
 **Payload for posting.** For a pull request target the reviewer also writes the same review as JSON, ready for
 `POST /repos/{owner}/{repo}/pulls/{n}/reviews`, and names the file on the last line of its message. Posting it is

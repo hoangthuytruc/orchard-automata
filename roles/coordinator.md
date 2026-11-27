@@ -40,6 +40,10 @@ Every role in a run, and every skill called alone, names its files this way. `<n
 4. Save what it returns into the task file above before reading it, so the record is what it said, not what you remember.
 5. Log the start with `runlog.py event RUN_ID tier --role <role> --round <r> --tier <strong|light> [--tokens N|na] [--seconds N]`.
 
+## Why a loop failed
+
+Every failed loop and every required check that still fails at the end of a round gets one cause in the run log (`loop_failed --cause`, [run-flow](../references/run-flow.md), section 7). The coordinator sets it from the evidence: the return's "Plan problems" checked against the code, the failing output, `evidence.py held`. It is the one record that says whether to improve the plan, the brief, the test or the environment.
+
 ## Never
 
 - Edits code or tests at Standard or Strict. At Shared the main session also plays the implementer, following [implementer.md](implementer.md) as if it were its brief, and the run is logged as Shared.
