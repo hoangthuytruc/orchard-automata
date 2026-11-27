@@ -1,0 +1,8 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "orchard",
+  "version": "0.1.0",
+  "description": "Portable iOS skill set: plan, implement, test, verify, debug, review, debt, handoff, update-docs, run, retro and adopt, with scripts that make each result cheap to verify. No skill commits, pushes or opens a pull request.",
+  "keywords": ["ios", "swift", "workflow", "tdd", "testing", "code-review", "tech-debt"],
+  "skills": ["./skills"]
+}

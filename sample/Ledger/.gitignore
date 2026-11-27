@@ -1,0 +1,5 @@
+.build/
+.swiftpm/
+.orchard/runs/
+.orchard/agents.local.md
+xcuserdata/
