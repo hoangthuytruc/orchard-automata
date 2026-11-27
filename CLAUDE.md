@@ -44,6 +44,6 @@ This repository is the product. It is never the target of its own workflows: a p
 | Script self-tests | `python3 -I scripts/selftest.py` |
 | Rebuild the skill map's data | `python3 -I site/build_map.py` |
 | Preview the skill map | `python3 -m http.server 8765 --directory site`, then open `http://localhost:8765/skill-map/` |
-| Refresh the README's pictures of the map | Headless Chrome, once per theme: `--headless=new --window-size=1400,720 --force-device-scale-factor=2 --screenshot=site/skill-map/preview/overview-<light or dark>.png "file://$PWD/site/skill-map/index.html#view=overview&theme=<light or dark>"` |
+| Refresh the README's pictures of the map | Headless Chrome, once per theme: `--headless=new --window-size=1400,440 --force-device-scale-factor=2 --screenshot=site/skill-map/preview/overview-<light or dark>.png "file://$PWD/site/skill-map/index.html#view=overview&picture&theme=<light or dark>"` |
 | Sample builds and tests | `cd sample/Ledger && swift build && swift test` |
 | Eval suite | `scripts/eval.sh smoke` (spawns agent runs on the developer's account) |

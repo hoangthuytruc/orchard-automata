@@ -108,6 +108,8 @@ footer { position: fixed; inset: auto 0 0 0; height: 28px; display: flex; align-
   #legend, #zoom { bottom: 12px; }
   #detail { left: 0; right: 0; top: auto; width: auto; max-height: 62vh; border-left-width: 0; border-top-width: 1px; border-radius: 14px 14px 0 0; transform: translateY(100%); box-shadow: var(--shadow); }
 }
+body.picture header, body.picture footer, body.picture #legend, body.picture #zoom, body.picture #about, body.picture aside { display: none; }
+body.picture main { inset: 0; }
 @media (prefers-reduced-motion: reduce) { aside { transition: none; } }
 </style>
 </head>
@@ -254,9 +256,10 @@ footer { position: fixed; inset: auto 0 0 0; height: 28px; display: flex; align-
   function fit() {
     const boxes = Object.values(pos), box = svg.getBoundingClientRect();
     const x1 = Math.min(...boxes.map((b) => b.x)) - 40, y1 = Math.min(...boxes.map((b) => b.y)) - 60;
-    const x2 = Math.max(...boxes.map((b) => b.x)) + W + 40, y2 = Math.max(...boxes.map((b) => b.y)) + H + 70;
-    const top = 70, bottom = $('legend').open && box.width > 720 ? $('legend').offsetHeight + 24 : 56, room = box.height - top - bottom;
-    const k = Math.min(1.15, box.width / (x2 - x1), room / (y2 - y1));
+    const x2 = Math.max(...boxes.map((b) => b.x)) + W + 40, y2 = Math.max(...boxes.map((b) => b.y)) + H + (document.body.classList.contains('picture') ? 40 : 70);
+    const bare = document.body.classList.contains('picture');
+    const top = bare ? 0 : 70, bottom = bare ? 0 : $('legend').open && box.width > 720 ? $('legend').offsetHeight + 24 : 56, room = box.height - top - bottom;
+    const k = Math.min(bare ? 3 : 1.15, box.width / (x2 - x1), room / (y2 - y1));
     tf = { k, x: (box.width - (x2 - x1) * k) / 2 - x1 * k, y: top + (room - (y2 - y1) * k) / 2 - y1 * k };
     apply();
   }
@@ -384,6 +387,7 @@ footer { position: fixed; inset: auto 0 0 0; height: 28px; display: flex; align-
   // theme
   const root = document.documentElement;
   let stored = null; try { stored = localStorage.getItem('orchard-map-theme'); } catch (e) { /* storage may be blocked */ }
+  if (new URLSearchParams(location.hash.slice(1)).has('picture')) document.body.classList.add('picture');  // the map alone, for the README's picture
   const asked = new URLSearchParams(location.hash.slice(1)).get('theme');  // #view=overview&theme=dark, for a shared link or a picture
   root.dataset.theme = ['light', 'dark'].includes(asked) ? asked : stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   function theme() { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('orchard-map-theme', root.dataset.theme); } catch (e) { /* ignore */ } }
