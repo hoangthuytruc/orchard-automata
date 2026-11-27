@@ -20,14 +20,13 @@ Orchard makes them <strong>prove</strong> their work, so you check evidence, not
 
 ```mermaid
 flowchart LR
-    T([Ticket]):::you --> P([Plan]):::agent --> A{{Approve}}:::you
+    P([Plan]):::agent --> A{{You approve}}:::you --> run
     subgraph run [" Agents work. No questions asked. "]
-        direction LR
-        B([Build<br/>tests first]):::agent --> C([Check<br/>by scripts]):::agent --> R([Review<br/>separate agent]):::agent
+        direction TB
+        B([Build, tests first]):::agent --> C([Check, by scripts]):::agent --> R([Review, by a separate agent]):::agent
         R -. fix, up to 3 rounds .-> B
     end
-    A --> B
-    R --> E([Report<br/>with evidence]):::agent --> X{{Accept}}:::you
+    run --> E([Report with evidence]):::agent --> X{{You accept}}:::you
 
     classDef you fill:#fde68a,stroke:#d97706,stroke-width:2px,color:#422006
     classDef agent fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
