@@ -9,7 +9,7 @@ pattern per line, `<name>: <regular expression>`, matched without regard to case
   leak_check.py [path ...]
 
 With no path, scans these folders of the skill set: skills, references, scripts, roles, workflows, templates,
-adapters, evals. Folders are walked; sample/, docs/skill-set-plan.md and THIRD_PARTY_NOTICES.md are always left out
+adapters, evals, site. Folders are walked; sample/, docs/skill-set-plan.md and THIRD_PARTY_NOTICES.md are always left out
 of a walk, as are .git and build folders. A file named on the command line is scanned as given. A line that carries
 the comment `leak-check: allow` is skipped. Binary files are skipped.
 
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 ORCHARD = Path(__file__).resolve().parents[1]
-DEFAULT_DIRS = ('skills', 'references', 'scripts', 'roles', 'workflows', 'templates', 'adapters', 'evals')
+DEFAULT_DIRS = ('skills', 'references', 'scripts', 'roles', 'workflows', 'templates', 'adapters', 'evals', 'site')
 EXCLUDED = {'sample', 'docs/skill-set-plan.md', 'THIRD_PARTY_NOTICES.md'}
 SKIP_DIRS = {'.git', '.build', 'build', 'DerivedData', 'node_modules', '__pycache__', 'results'}
 ALLOW = 'leak-check: allow'

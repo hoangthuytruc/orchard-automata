@@ -14,7 +14,7 @@ Orchard makes them <strong>prove</strong> their work, so you check evidence, not
 <img alt="License" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square">
 </p>
 
-<p><a href="#-install">Install</a> · <a href="#-quick-start">Quick start</a> · <a href="#-how-it-works">How it works</a></p>
+<p><a href="#-install">Install</a> · <a href="#-quick-start">Quick start</a> · <a href="#-how-it-works">How it works</a> · <a href="https://hoangthuytruc.github.io/orchard-automata/skill-map/"><strong>Skill map</strong></a></p>
 
 </div>
 
@@ -34,6 +34,8 @@ flowchart LR
 ```
 
 <p align="center"><sub>Yellow is you. Blue is the agents. You decide twice; nothing in between waits for you.</sub></p>
+
+<p align="center"><a href="https://hoangthuytruc.github.io/orchard-automata/skill-map/"><strong>Explore the interactive skill map →</strong></a><br><sub>Every skill, script and role, and how they connect. Click any node.</sub></p>
 
 ## 📦 Install
 

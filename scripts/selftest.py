@@ -367,6 +367,11 @@ def test_evidence(root):
     os.rename(root / (test_file + '.gone'), root / test_file)
 
 
+def test_skill_map():
+    check('skill map: its data matches the skills, scripts, roles and references',
+          [sys.executable, '-I', str(ORCHARD / 'site' / 'build_map.py'), '--check'], ORCHARD, 0, ['up to date'], script=False)
+
+
 def test_plan_seal(work):
     plan = work / 'seal-plan.md'
     plan.write_text('# Plan: seal\nStatus: draft\nWorkflow: bug-fix · Isolation: Standard · Base branch: main\n\n'
@@ -651,6 +656,7 @@ def main():
         test_evidence(root)
         test_runlog(work)
         test_plan_seal(work)
+        test_skill_map()
         test_leaks(work)
         test_adapters(root, work)
         test_verdict(root)

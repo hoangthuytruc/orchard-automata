@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orchard skill map</title>
+<meta name="description" content="An interactive map of the Orchard Automata skill set: the flows, the twelve skills, and the scripts, roles and files behind them.">
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #5b6676; --line: #d5dae2; --edge: #7b8696; --accent: #2563eb;
+  --grid: #e7eaef; --shadow: 0 6px 24px rgba(20, 30, 50, .12);
+  --you-bg: #e3edff; --you-bd: #2563eb; --run-bg: #dcf5ec; --run-bd: #0f8a63; --role-bg: #efe7ff; --role-bd: #7c3aed;
+  --script-bg: #ffe6d5; --script-bd: #c2570c; --ref-bg: #eef0f3; --ref-bd: #6b7686; --file-bg: #ffffff; --file-bd: #64748b;
+  --person-bg: #fde68a; --person-bd: #d97706; --person-ink: #422006;
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --panel: #161b22; --ink: #e6edf3; --muted: #9aa7b6; --line: #2d3540; --edge: #8591a2; --accent: #6ea8ff;
+  --grid: #1a2029; --shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  --you-bg: #13254a; --you-bd: #6ea8ff; --run-bg: #0f2f26; --run-bd: #3fcf9c; --role-bg: #271b47; --role-bd: #b392f0;
+  --script-bg: #3a1e0c; --script-bd: #f0883e; --ref-bg: #1c222b; --ref-bd: #8591a2; --file-bg: #11161d; --file-bd: #8fa0b5;
+  --person-bg: #5a4208; --person-bd: #f5b83d; --person-ink: #fff3cf;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; overflow: hidden; }
+button, input { font: inherit; color: inherit; }
+header { position: fixed; inset: 0 0 auto 0; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 5; }
+header h1 { font-size: 15px; margin: 0; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; height: 34px; min-width: 34px; padding: 0 10px; cursor: pointer; }
+.btn:hover, .btn:focus-visible { border-color: var(--accent); outline: none; }
+.spacer { flex: 1; }
+.search { position: relative; flex: 0 1 320px; min-width: 120px; }
+.search input { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 10px; }
+.search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+#results { position: absolute; top: 40px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); max-height: 60vh; overflow: auto; display: none; }
+#results button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 12px; cursor: pointer; }
+#results button:hover, #results button.on { background: var(--bg); }
+#results small { color: var(--muted); display: block; }
+main { position: fixed; inset: 52px 0 28px 0; }
+svg#map { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; background-image: radial-gradient(var(--grid) 1px, transparent 1px); background-size: 22px 22px; }
+svg#map.drag { cursor: grabbing; }
+.node rect, .node polygon { stroke-width: 1.6; }
+.node { cursor: pointer; }
+.node text { fill: var(--ink); pointer-events: none; }
+.node .t { font-weight: 600; font-size: 14px; }
+.node .s { font-size: 11.5px; fill: var(--muted); }
+.node:hover rect, .node:hover polygon, .node:focus rect, .node:focus polygon { stroke-width: 2.6; }
+.node:focus { outline: none; }
+.node.sel rect, .node.sel polygon { stroke-width: 3.2; filter: drop-shadow(0 0 6px var(--accent)); }
+.node.dim { opacity: .28; }
+.k-skill-you rect { fill: var(--you-bg); stroke: var(--you-bd); }
+.k-skill-run rect { fill: var(--run-bg); stroke: var(--run-bd); }
+.k-role rect { fill: var(--role-bg); stroke: var(--role-bd); }
+.k-script rect { fill: var(--script-bg); stroke: var(--script-bd); }
+.k-reference rect { fill: var(--ref-bg); stroke: var(--ref-bd); }
+.k-file rect { fill: var(--file-bg); stroke: var(--file-bd); stroke-dasharray: 5 4; }
+.k-person polygon { fill: var(--person-bg); stroke: var(--person-bd); }
+.k-person text, .k-person .s { fill: var(--person-ink); }
+.badge { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; fill: var(--muted); }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.edge.feeds, .edge.reads, .edge.writes { stroke-dasharray: 2 5; stroke-linecap: round; }
+.edge.starts { stroke: var(--role-bd); }
+.edge.loop { stroke-dasharray: 7 5; stroke: var(--person-bd); }
+.edge.dim { opacity: .15; }
+.elabel { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; }
+.group rect { fill: none; stroke: var(--line); stroke-dasharray: 6 5; stroke-width: 1.4; }
+.group text { font-size: 11.5px; fill: var(--muted); }
+aside { position: fixed; top: 52px; bottom: 28px; background: var(--panel); border: 0 solid var(--line); overflow: auto; z-index: 4; transition: transform .18s ease; }
+#views { left: 0; width: 250px; border-right-width: 1px; transform: translateX(-100%); padding: 10px; }
+#views.open { transform: none; }
+#views h2, #detail h3 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 12px 6px 6px; }
+#views button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 7px 8px; border-radius: 7px; cursor: pointer; }
+#views button:hover { background: var(--bg); }
+#views button.on { background: var(--you-bg); font-weight: 600; }
+#detail { right: 0; width: min(380px, 92vw); border-left-width: 1px; transform: translateX(100%); padding: 16px 18px 24px; }
+#detail.open { transform: none; }
+#detail h2 { margin: 0 34px 2px 0; font-size: 19px; overflow-wrap: anywhere; }
+#detail .kind { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+#detail p { margin: 0 0 12px; }
+#detail dl { margin: 0; }
+#detail dt { font-weight: 600; font-size: 12.5px; margin-top: 10px; }
+#detail dd { margin: 2px 0 0; color: var(--ink); overflow-wrap: anywhere; }
+#detail dd.code { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
+#detail .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+#detail a.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+#close { position: absolute; top: 12px; right: 12px; }
+#legend { position: fixed; left: 12px; bottom: 40px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; z-index: 3; font-size: 12px; max-width: min(520px, calc(100vw - 24px)); }
+#legend summary { cursor: pointer; font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#legend ul { list-style: none; margin: 8px 0 2px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; }
+#legend i { display: inline-block; width: 22px; height: 12px; border-radius: 3px; border: 1.6px solid; margin-right: 7px; vertical-align: -2px; }
+#legend i.ln { height: 0; border-width: 1.6px 0 0; border-radius: 0; vertical-align: 3px; }
+#zoom { position: fixed; right: 12px; bottom: 40px; display: flex; gap: 6px; z-index: 3; }
+#about { position: fixed; left: 12px; top: 64px; right: 12px; z-index: 2; pointer-events: none; color: var(--muted); font-size: 13px; max-width: 760px; }
+#about b { color: var(--ink); font-size: 15px; display: block; }
+footer { position: fixed; inset: auto 0 0 0; height: 28px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 11.5px; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+#help { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: none; align-items: center; justify-content: center; z-index: 9; }
+#help.open { display: flex; }
+#help div { background: var(--panel); border-radius: 12px; padding: 18px 22px; max-width: 420px; box-shadow: var(--shadow); }
+#help h2 { margin: 0 0 8px; font-size: 16px; }
+#help kbd { border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; background: var(--bg); font: 12px ui-monospace, monospace; }
+#help li { margin: 5px 0; }
+@media (max-width: 720px) {
+  header h1 span, .chip, footer, #repo { display: none; }
+  main, aside { bottom: 0; }
+  #legend ul { grid-template-columns: 1fr; }
+  #legend, #zoom { bottom: 12px; }
+  #detail { left: 0; right: 0; top: auto; width: auto; max-height: 62vh; border-left-width: 0; border-top-width: 1px; border-radius: 14px 14px 0 0; transform: translateY(100%); box-shadow: var(--shadow); }
+}
+@media (prefers-reduced-motion: reduce) { aside { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <button class="btn" id="menu" aria-label="Toggle the views list" aria-expanded="false">☰</button>
+  <span class="dot" aria-hidden="true"></span>
+  <h1>Orchard <span>skill map</span></h1>
+  <span class="chip" id="chip"></span>
+  <span class="spacer"></span>
+  <div class="search">
+    <input id="q" type="search" placeholder="Find a skill, script or view…  ( / )" aria-label="Search nodes and views" autocomplete="off">
+    <div id="results" role="listbox"></div>
+  </div>
+  <button class="btn" id="theme" aria-label="Toggle light and dark theme">◐</button>
+  <button class="btn" id="helpBtn" aria-label="Keyboard shortcuts">?</button>
+  <a class="btn" id="repo" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit" href="https://github.com/hoangthuytruc/orchard-automata">GitHub</a>
+</header>
+
+<aside id="views" aria-label="Views"></aside>
+
+<main>
+  <div id="about"></div>
+  <svg id="map" role="application" aria-label="Skill map. Drag to move, scroll to zoom, click a node for details.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M1 1L9 5L1 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <g id="world"><g id="groups"></g><g id="edges"></g><g id="nodes"></g></g>
+  </svg>
+</main>
+
+<aside id="detail" aria-label="Details" aria-live="polite"></aside>
+
+<details id="legend" open>
+  <summary>Legend</summary>
+  <ul>
+    <li><i style="background:var(--you-bg);border-color:var(--you-bd)"></i>Skill you call</li>
+    <li><i style="background:var(--run-bg);border-color:var(--run-bd)"></i>Skill a run calls</li>
+    <li><i style="background:var(--person-bg);border-color:var(--person-bd)"></i>You: a decision or a step</li>
+    <li><i style="background:var(--role-bg);border-color:var(--role-bd)"></i>Role, played by an agent</li>
+    <li><i style="background:var(--script-bg);border-color:var(--script-bd)"></i>Script: runs the same for anyone</li>
+    <li><i style="background:var(--ref-bg);border-color:var(--ref-bd)"></i>Reference the skills cite</li>
+    <li><i style="background:var(--file-bg);border-color:var(--file-bd);border-style:dashed"></i>File: a plan, a record, a report</li>
+    <li><i class="ln" style="border-color:var(--edge)"></i>calls, in order</li>
+    <li><i class="ln" style="border-color:var(--edge);border-top-style:dotted"></i>reads, writes or feeds</li>
+    <li><i class="ln" style="border-color:var(--person-bd);border-top-style:dashed"></i>loops back</li>
+  </ul>
+</details>
+
+<div id="zoom">
+  <button class="btn" id="up" aria-label="Back to the overview" title="Back to the overview">↑</button>
+  <button class="btn" id="zout" aria-label="Zoom out">−</button>
+  <button class="btn" id="fit" aria-label="Fit to screen">Fit</button>
+  <button class="btn" id="zin" aria-label="Zoom in">+</button>
+</div>
+
+<footer><span>scroll = zoom</span><span>drag = move</span><span>click = details</span><span>double-click a skill = open it</span><span>/ = search</span><span>? = keys</span></footer>
+
+<div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div>
+  <h2>Keys</h2>
+  <ul>
+    <li><kbd>/</kbd> or <kbd>⌘K</kbd> search</li>
+    <li><kbd>0</kbd> fit to screen · <kbd>+</kbd> <kbd>−</kbd> zoom</li>
+    <li><kbd>M</kbd> views list · <kbd>T</kbd> theme · <kbd>U</kbd> back to the overview</li>
+    <li><kbd>Tab</kbd> walk the nodes · <kbd>Enter</kbd> details · <kbd>O</kbd> open a skill's own view</li>
+    <li><kbd>Esc</kbd> close</li>
+  </ul>
+  <button class="btn" id="helpClose">Close</button>
+</div></div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  const MAP = window.ORCHARD_MAP, NS = 'http://www.w3.org/2000/svg';
+  const W = 196, H = 62, CW = 256, CH = 124;
+  const KIND = { 'skill-you': 'Skill you call', 'skill-run': 'Skill a run calls', role: 'Role', script: 'Script', reference: 'Reference', file: 'File', person: 'You' };
+  const $ = (id) => document.getElementById(id);
+  const svg = $('map'), world = $('world');
+  let view = null, selected = null, tf = { x: 0, y: 0, k: 1 }, pos = {};
+
+  const el = (name, attrs = {}, text) => {
+    const node = document.createElementNS(NS, name);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const clip = (text, max) => (text.length > max ? text.slice(0, max - 1) + '…' : text);
+
+  function route(a, b, kind) {
+    const ax = a.x + W / 2, ay = a.y + H / 2, bx = b.x + W / 2, by = b.y + H / 2;
+    if (kind === 'loop') {
+      const low = Math.max(a.y, b.y) + H + 44;
+      return { d: `M${ax} ${a.y + H} C${ax} ${low} ${bx} ${low} ${bx} ${b.y + H + 3}`, lx: (ax + bx) / 2, ly: low - 14 };
+    }
+    if (Math.abs(a.x - b.x) < CW / 2 || (Math.abs(a.y - b.y) > CH * 0.9 && Math.abs(a.x - b.x) < CW * 1.05)) {
+      const down = by > ay, y1 = down ? a.y + H : a.y, y2 = down ? b.y - 3 : b.y + H + 3, mid = (y1 + y2) / 2;
+      return { d: `M${ax} ${y1} C${ax} ${mid} ${bx} ${mid} ${bx} ${y2}`, lx: (ax + bx) / 2 + 8, ly: mid, anchor: 'start' };
+    }
+    const right = bx > ax, x1 = right ? a.x + W : a.x, x2 = right ? b.x - 3 : b.x + W + 3, bend = Math.max(40, Math.abs(x2 - x1) / 2);
+    return { d: `M${x1} ${ay} C${x1 + (right ? bend : -bend)} ${ay} ${x2 - (right ? bend : -bend)} ${by} ${x2} ${by}`, lx: (x1 + x2) / 2, ly: (ay + by) / 2 - 7 };
+  }
+
+  function draw() {
+    for (const id of ['groups', 'edges', 'nodes']) $(id).replaceChildren();
+    pos = {};
+    for (const p of view.place) pos[p.id] = { x: p.col * CW, y: p.row * CH };
+    for (const group of view.groups || []) {
+      const boxes = group.ids.map((id) => pos[id]).filter(Boolean);
+      if (!boxes.length) continue;
+      const x = Math.min(...boxes.map((b) => b.x)) - 18, y = Math.min(...boxes.map((b) => b.y)) - 34;
+      const x2 = Math.max(...boxes.map((b) => b.x)) + W + 18, y2 = Math.max(...boxes.map((b) => b.y)) + H + 18;
+      const g = el('g', { class: 'group' });
+      g.append(el('rect', { x, y, width: x2 - x, height: y2 - y, rx: 14 }), el('text', { x: x + 12, y: y + 17 }, group.label));
+      $('groups').append(g);
+    }
+    for (const edge of view.edges) {
+      if (!pos[edge.from] || !pos[edge.to]) continue;
+      const r = route(pos[edge.from], pos[edge.to], edge.kind);
+      const path = el('path', { class: 'edge ' + edge.kind, d: r.d, 'marker-end': 'url(#arrow)', 'data-from': edge.from, 'data-to': edge.to });
+      $('edges').append(path);
+      if (edge.label) $('edges').append(el('text', { class: 'elabel', x: r.lx, y: r.ly, 'text-anchor': r.anchor || 'middle', 'data-from': edge.from, 'data-to': edge.to }, edge.label));
+    }
+    for (const p of view.place) {
+      const n = MAP.nodes[p.id], { x, y } = pos[p.id];
+      const g = el('g', { class: 'node k-' + n.kind, tabindex: 0, role: 'button', 'data-id': n.id, 'aria-label': `${KIND[n.kind]}: ${n.title}. ${n.sub}` });
+      if (n.kind === 'person') g.append(el('polygon', { points: `${x + 16},${y} ${x + W - 16},${y} ${x + W},${y + H / 2} ${x + W - 16},${y + H} ${x + 16},${y + H} ${x},${y + H / 2}` }));
+      else g.append(el('rect', { x, y, width: W, height: H, rx: n.kind.startsWith('skill') ? 12 : 6 }));
+      g.append(el('text', { class: 't', x: x + W / 2, y: y + 26, 'text-anchor': 'middle' }, clip(n.title, 24)));
+      g.append(el('text', { class: 's', x: x + W / 2, y: y + 45, 'text-anchor': 'middle' }, clip(n.sub, 32)));
+      if (n.view && n.view !== view.id) g.append(el('text', { class: 'badge', x: x + W - 10, y: y + 14, 'text-anchor': 'end' }, 'OPEN ⤢'));
+      g.addEventListener('click', (e) => { e.stopPropagation(); select(n.id); });
+      g.addEventListener('dblclick', (e) => { e.stopPropagation(); if (n.view) go(n.view); });
+      g.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(n.id); }
+        if (e.key.toLowerCase() === 'o' && n.view) go(n.view);
+      });
+      $('nodes').append(g);
+    }
+  }
+
+  function apply() { world.setAttribute('transform', `translate(${tf.x} ${tf.y}) scale(${tf.k})`); }
+  function fit() {
+    const boxes = Object.values(pos), box = svg.getBoundingClientRect();
+    const x1 = Math.min(...boxes.map((b) => b.x)) - 40, y1 = Math.min(...boxes.map((b) => b.y)) - 60;
+    const x2 = Math.max(...boxes.map((b) => b.x)) + W + 40, y2 = Math.max(...boxes.map((b) => b.y)) + H + 70;
+    const top = 70, bottom = $('legend').open && box.width > 720 ? $('legend').offsetHeight + 24 : 56, room = box.height - top - bottom;
+    const k = Math.min(1.15, box.width / (x2 - x1), room / (y2 - y1));
+    tf = { k, x: (box.width - (x2 - x1) * k) / 2 - x1 * k, y: top + (room - (y2 - y1) * k) / 2 - y1 * k };
+    apply();
+  }
+  function zoom(factor, cx, cy) {
+    const box = svg.getBoundingClientRect(), px = cx ?? box.width / 2, py = cy ?? box.height / 2;
+    const k = Math.min(2.5, Math.max(0.2, tf.k * factor));
+    tf = { k, x: px - (px - tf.x) * (k / tf.k), y: py - (py - tf.y) * (k / tf.k) };
+    apply();
+  }
+
+  function select(id, center) {
+    selected = id && pos[id] ? id : null;
+    for (const g of $('nodes').children) {
+      const me = g.dataset.id;
+      const linked = selected && view.edges.some((e) => (e.from === selected && e.to === me) || (e.to === selected && e.from === me));
+      g.classList.toggle('sel', me === selected);
+      g.classList.toggle('dim', !!selected && me !== selected && !linked);
+    }
+    for (const e of $('edges').children) e.classList.toggle('dim', !!selected && e.dataset.from !== selected && e.dataset.to !== selected);
+    const panel = $('detail');
+    panel.classList.toggle('open', !!selected);
+    if (selected) {
+      const n = MAP.nodes[selected];
+      panel.replaceChildren();
+      const add = (tag, text, cls) => { const node = document.createElement(tag); if (text) node.textContent = text; if (cls) node.className = cls; panel.append(node); return node; };
+      const close = add('button', '✕', 'btn'); close.id = 'close'; close.setAttribute('aria-label', 'Close details'); close.onclick = () => select(null);
+      add('h2', n.title); add('div', `${KIND[n.kind]} · ${n.sub}`, 'kind'); add('p', n.detail);
+      if (n.facts && n.facts.length) {
+        const dl = add('dl');
+        for (const [name, value] of n.facts) {
+          const dt = document.createElement('dt'); dt.textContent = name;
+          const dd = document.createElement('dd'); dd.textContent = value; if (name === 'You type') dd.className = 'code';
+          dl.append(dt, dd);
+        }
+      }
+      const uses = Object.values(MAP.views).filter((v) => v.id !== view.id && v.place.some((p) => p.id === n.id) && !v.id.startsWith('skill-'));
+      if (uses.length) { add('h3', 'Also in'); const row = add('div', '', 'actions'); for (const v of uses) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = v.title; b.onclick = () => go(v.id, n.id); row.append(b); } }
+      const actions = add('div', '', 'actions');
+      if (n.view && n.view !== view.id) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Open its own view ⤢'; b.onclick = () => go(n.view); actions.append(b); }
+      if (n.path) { const a = document.createElement('a'); a.className = 'btn'; a.href = MAP.repo + n.path; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Read the source ↗'; actions.append(a); }
+      if (center) { const box = svg.getBoundingClientRect(); tf.x = box.width / 2 - (pos[selected].x + W / 2) * tf.k - (box.width > 900 ? 150 : 0); tf.y = box.height / 2 - (pos[selected].y + H / 2) * tf.k; apply(); }
+    }
+    history.replaceState(null, '', '#view=' + view.id + (selected ? '&node=' + encodeURIComponent(selected) : ''));
+  }
+
+  function go(id, node) {
+    view = MAP.views.find((v) => v.id === id) || MAP.views[0];
+    document.title = view.title + ' · Orchard skill map';
+    $('chip').textContent = `${view.title} · ${view.place.length} nodes`;
+    $('about').replaceChildren(Object.assign(document.createElement('b'), { textContent: view.title }), document.createTextNode(view.about));
+    $('up').style.display = view.id === 'overview' ? 'none' : '';
+    for (const b of $('views').querySelectorAll('button')) b.classList.toggle('on', b.dataset.view === view.id);
+    draw(); fit(); select(node || null, !!node);
+  }
+
+  function menu() {
+    const side = $('views'), flows = MAP.views.filter((v) => !v.id.startsWith('skill-')), skills = MAP.views.filter((v) => v.id.startsWith('skill-'));
+    for (const [label, list] of [['Flows', flows], ['Skills', skills]]) {
+      const h = document.createElement('h2'); h.textContent = label; side.append(h);
+      for (const v of list) { const b = document.createElement('button'); b.textContent = v.title.replace('Skill: ', ''); b.dataset.view = v.id; b.onclick = () => { go(v.id); toggleMenu(false); }; side.append(b); }
+    }
+  }
+  function toggleMenu(open) { const side = $('views'), on = open ?? !side.classList.contains('open'); side.classList.toggle('open', on); $('menu').setAttribute('aria-expanded', on); }
+
+  // search
+  const q = $('q'), results = $('results');
+  let hits = [], cursor = 0;
+  function search() {
+    const term = q.value.trim().toLowerCase();
+    hits = [];
+    if (term) {
+      for (const v of MAP.views) if (v.title.toLowerCase().includes(term)) hits.push({ label: v.title, sub: 'View', run: () => go(v.id) });
+      const seen = new Set();
+      for (const n of Object.values(MAP.nodes)) {
+        const key = n.kind + n.title;
+        if (seen.has(key) || !(n.title + ' ' + n.sub + ' ' + n.detail).toLowerCase().includes(term)) continue;
+        seen.add(key);
+        const home = view.place.some((p) => p.id === n.id) ? view : MAP.views.find((v) => v.id === n.view) || MAP.views.find((v) => v.place.some((p) => p.id === n.id));
+        if (home) hits.push({ label: n.title, sub: `${KIND[n.kind]} · ${n.sub}`, run: () => go(home.id, n.id) });
+      }
+      hits.sort((a, b) => b.label.toLowerCase().startsWith(term) - a.label.toLowerCase().startsWith(term));
+      hits = hits.slice(0, 12);
+    }
+    cursor = 0; results.replaceChildren();
+    hits.forEach((hit, i) => {
+      const b = document.createElement('button'); b.setAttribute('role', 'option'); b.className = i === cursor ? 'on' : '';
+      b.append(document.createTextNode(hit.label), Object.assign(document.createElement('small'), { textContent: hit.sub }));
+      b.onclick = () => pick(i); results.append(b);
+    });
+    if (term && !hits.length) results.append(Object.assign(document.createElement('button'), { textContent: 'Nothing found', disabled: true }));
+    results.style.display = term ? 'block' : 'none';
+  }
+  function pick(i) { if (hits[i]) { hits[i].run(); q.value = ''; search(); q.blur(); } }
+  q.addEventListener('input', search);
+  q.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); cursor = (cursor + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % Math.max(1, hits.length); [...results.children].forEach((b, i) => b.classList.toggle('on', i === cursor)); }
+    if (e.key === 'Enter') pick(cursor);
+    if (e.key === 'Escape') { q.value = ''; search(); q.blur(); }
+  });
+
+  // pan and zoom
+  let drag = null, pinch = 0;
+  const touches = new Map();
+  const spread = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  svg.addEventListener('pointerdown', (e) => {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { pinch = spread(); drag = null; return; }
+    if (e.target.closest('.node')) return;
+    drag = { x: e.clientX - tf.x, y: e.clientY - tf.y, moved: false }; svg.setPointerCapture(e.pointerId); svg.classList.add('drag');
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2 && pinch) {
+      const now = spread(), [a, b] = [...touches.values()], box = svg.getBoundingClientRect();
+      zoom(now / pinch, (a.x + b.x) / 2 - box.left, (a.y + b.y) / 2 - box.top); pinch = now; return;
+    }
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x - tf.x) + Math.abs(e.clientY - drag.y - tf.y) > 3) drag.moved = true;
+    tf.x = e.clientX - drag.x; tf.y = e.clientY - drag.y; apply();
+  });
+  const release = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = 0; if (drag && !drag.moved && e.type === 'pointerup') select(null); drag = null; svg.classList.remove('drag'); };
+  svg.addEventListener('pointerup', release); svg.addEventListener('pointercancel', release);
+  svg.addEventListener('wheel', (e) => { e.preventDefault(); const box = svg.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * 0.0015), e.clientX - box.left, e.clientY - box.top); }, { passive: false });
+
+  // theme
+  const root = document.documentElement;
+  let stored = null; try { stored = localStorage.getItem('orchard-map-theme'); } catch (e) { /* storage may be blocked */ }
+  root.dataset.theme = stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  function theme() { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('orchard-map-theme', root.dataset.theme); } catch (e) { /* ignore */ } }
+
+  const help = (open) => $('help').classList.toggle('open', open);
+  $('menu').onclick = () => toggleMenu(); $('theme').onclick = theme; $('helpBtn').onclick = () => help(true); $('helpClose').onclick = () => help(false);
+  $('help').onclick = (e) => { if (e.target.id === 'help') help(false); };
+  $('fit').onclick = fit; $('zin').onclick = () => zoom(1.25); $('zout').onclick = () => zoom(0.8); $('up').onclick = () => go('overview');
+  $('repo').href = MAP.repo.replace('/blob/main/', '');
+  addEventListener('resize', fit);
+  addEventListener('keydown', (e) => {
+    if (e.target === q) return;
+    if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); q.focus(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === '0') fit(); else if (key === '+' || key === '=') zoom(1.25); else if (key === '-') zoom(0.8);
+    else if (key === 'm') toggleMenu(); else if (key === 't') theme(); else if (key === 'u') go('overview'); else if (key === '?') help(true);
+    else if (key === 'escape') { help(false); toggleMenu(false); select(null); }
+  });
+  addEventListener('hashchange', () => { const p = new URLSearchParams(location.hash.slice(1)); if (p.get('view') && p.get('view') !== view.id) go(p.get('view'), p.get('node')); });
+
+  if (innerWidth < 900) $('legend').open = false;
+  $('legend').addEventListener('toggle', fit);
+  menu();
+  const start = new URLSearchParams(location.hash.slice(1));
+  go(start.get('view') || 'overview', start.get('node'));
+})();
+</script>
+</body>
+</html>

@@ -6,3 +6,4 @@ xcuserdata/
 *.xcresult
 .leak-patterns.local
 docs/skill-set-plan.md
+.claude/
