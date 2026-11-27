@@ -26,7 +26,7 @@ This repository is the product. It is never the target of its own workflows: a p
 ## Rules for changes
 
 - Keep the model, the templates and the workflows consistent: a change to the model's required fields or state contract is made in `templates/workflow.md` and every file in `workflows/` in the same change.
-- Core holds nothing project-specific. Run `python3 -I scripts/leak_check.py` after any change to core; it must report "clean" and exit 0.
+- Core holds nothing project-specific. Run `python3 -I scripts/leak_check.py` after any change to core; it must report "clean" and exit 0. Private project names and ticket keys to look for live in `.leak-patterns.local`, which git never tracks; never write one into a tracked file.
 - One home per rule. Before adding a rule, search for it; sharpen the existing text instead of adding a copy. A skill points to a reference; it does not restate it.
 - Every term is used as defined in `docs/terms.md`; a new term gets a row there with its official definition and source, or a statement that no standard defines it.
 - A change to a skill, reference, script or workflow is accepted only after it has been applied to `sample/Ledger/` and the evidence is recorded.

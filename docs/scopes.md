@@ -14,7 +14,7 @@ A scope level is the home of a fact: the narrowest place where it is true for ev
 
 **Routing rule.** A fact true for every iOS project goes to core; a fact true for one project goes to its profile; a fact true for one task goes to its plan; a preference goes to personal. The team chooses whether `.orchard/` is tracked or locally excluded; the skill set works either way.
 
-**Leak check.** `scripts/leak_check.py` fails when core holds what only a narrower level may hold: absolute home paths, a project name, a ticket key, a model name. It runs before any change to core is accepted.
+**Leak check.** `scripts/leak_check.py` fails when core holds what only a narrower level may hold: absolute home paths, a model name, an email address, and the private project names and ticket keys listed in a local pattern file that git never tracks (`.leak-patterns.local`). It runs before any change to core is accepted.
 
 ## The project profile
 

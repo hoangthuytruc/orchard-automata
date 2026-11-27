@@ -456,6 +456,20 @@ def test_leaks(work):
     allowed.write_text('/Users/x is an example. <!-- leak-check: allow -->\n', encoding='utf-8')  # leak-check: allow
     check('leak_check: allow-listed line -> exit 0', ['leak_check.py', str(allowed)], work, 0, ['clean'])
     check('leak_check: default folders scan runs', ['leak_check.py'], work, None, [r'leak check: \d+ file'])
+    patterns = work / 'leak-patterns'
+    patterns.write_text('# private names stay out of git\nproject name: \\bacmebank\\b\nticket key: \\bACME-\\d+\n',
+                        encoding='utf-8')
+    named = work / 'named.md'
+    named.write_text('Copied from the AcmeBank app, ticket ACME-12.\n', encoding='utf-8')
+    check('leak_check: without a local pattern file, a private name passes and the output says so',
+          ['leak_check.py', str(named)], work, 0, ['clean', 'no local pattern file'],
+          {'ORCHARD_LEAK_PATTERNS': str(work / 'none')})
+    check('leak_check: local patterns catch a project name and a ticket key', ['leak_check.py', str(named)], work, 1,
+          ['named.md:1: project name', 'named.md:1: ticket key', r'2 local pattern\(s\)'],
+          {'ORCHARD_LEAK_PATTERNS': str(patterns)})
+    patterns.write_text('project name \\bacmebank\\b\n', encoding='utf-8')
+    check('leak_check: a malformed local pattern line -> exit 64', ['leak_check.py', str(named)], work, 64,
+          ['expected `<name>: <regular expression>`'], {'ORCHARD_LEAK_PATTERNS': str(patterns)})
 
 
 def test_adapters(root, work):

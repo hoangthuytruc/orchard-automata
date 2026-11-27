@@ -4,3 +4,4 @@ build/
 *.xcuserstate
 xcuserdata/
 *.xcresult
+.leak-patterns.local
